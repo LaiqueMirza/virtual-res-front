@@ -1,6 +1,8 @@
 import React from 'react';
+import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import Dashboard from './components/Dashboard';
+import ResumeView from './components/ResumeView';
 import './App.css';
 
 // Create a custom theme
@@ -20,10 +22,16 @@ const theme = createTheme({
 
 function App() {
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline /> {/* Normalize CSS */}
-      <Dashboard />
-    </ThemeProvider>
+    <Router>
+      <ThemeProvider theme={theme}>
+        <CssBaseline /> {/* Normalize CSS */}
+        <Routes>
+          <Route path="/" element={<Dashboard />} />
+          <Route path="/view" element={<ResumeView />} />
+          <Route path="/view/:id" element={<ResumeView />} />
+        </Routes>
+      </ThemeProvider>
+    </Router>
   );
 }
 
