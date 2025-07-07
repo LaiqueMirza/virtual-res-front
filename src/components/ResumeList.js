@@ -77,6 +77,7 @@ const ResumeList = () => {
           {resumes.map((resume) => (
             <ResumeCard
               key={resume.resumes_uploaded_id}
+              id={resume.resumes_uploaded_id}
               resumeName={resume.resume_name}
               uploadedBy={resume.uploaded_by}
               date={formatDate(resume.created_at)}

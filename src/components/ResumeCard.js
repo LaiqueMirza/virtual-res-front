@@ -1,10 +1,20 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardActions, Typography, Button, Avatar, Box } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import ShareIcon from '@mui/icons-material/Share';
 import AnalyticsIcon from '@mui/icons-material/BarChart';
+import SharePopup from './SharePopup';
 
-const ResumeCard = ({ resumeName, uploadedBy, date }) => {
+const ResumeCard = ({ resumeName, uploadedBy, date, id }) => {
+  const [sharePopupOpen, setSharePopupOpen] = useState(false);
+
+  const handleOpenSharePopup = () => {
+    setSharePopupOpen(true);
+  };
+
+  const handleCloseSharePopup = () => {
+    setSharePopupOpen(false);
+  };
   return (
     <Card sx={{ mb: 2, borderRadius: 2, boxShadow: 2 }}>
       <CardContent>
@@ -27,9 +37,16 @@ const ResumeCard = ({ resumeName, uploadedBy, date }) => {
         <Button size="small" startIcon={<VisibilityIcon />}>
           Preview
         </Button>
-        <Button size="small" startIcon={<ShareIcon />}>
+        <Button size="small" startIcon={<ShareIcon />} onClick={handleOpenSharePopup}>
           Share
         </Button>
+        
+        <SharePopup 
+          open={sharePopupOpen} 
+          onClose={handleCloseSharePopup} 
+          resumeId={id}
+          resumeName={resumeName}
+        />
         <Button size="small" startIcon={<AnalyticsIcon />}>
           Analytics
         </Button>
