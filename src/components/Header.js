@@ -24,7 +24,7 @@ const Header = () => {
       <Box sx={{ display: 'flex', gap: 2 }}>
         <TextField
           size="small"
-          placeholder="search (Future)"
+          placeholder="search"
           InputProps={{
             startAdornment: (
               <InputAdornment position="start">

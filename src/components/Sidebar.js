@@ -22,12 +22,12 @@ const Sidebar = () => {
       <List>
         <ListItem disablePadding>
           <ListItemButton sx={{ bgcolor: 'white', mb: 1, borderRadius: 1 }}>
-            <ListItemText primary="Future Menu 1" />
+            <ListItemText primary="Menu 1" />
           </ListItemButton>
         </ListItem>
         <ListItem disablePadding>
           <ListItemButton sx={{ bgcolor: 'white', borderRadius: 1 }}>
-            <ListItemText primary="Future Menu 2" />
+            <ListItemText primary="Menu 2" />
           </ListItemButton>
         </ListItem>
       </List>
