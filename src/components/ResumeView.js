@@ -18,15 +18,16 @@ const ResumeView = () => {
 
     const fetchResume = async () => {
       try {
-        const response = await fetch(`http://localhost:8000/v1/resume/client/preview?id=${id}`);
+        const response = await fetch(`http://localhost:8000/v1/resume/preview?id=${id}`);
         if (!response.ok) {
-          throw new Error('Resume not found');
+          const errorData = await response.json();
+          throw new Error(errorData.message || 'Resume not found');
         }
         const data = await response.json();
         setResume(data);
         setLoading(false);
       } catch (err) {
-        setError('Failed to load resume. Please try again later.');
+        setError(err.message || 'Failed to load resume. Please try again later.');
         setLoading(false);
       }
     };
@@ -54,8 +55,13 @@ const ResumeView = () => {
 
   return (
     <Box sx={{ p: 3 }}>
-      {resume && (
-        <div dangerouslySetInnerHTML={{ __html: resume.content }} />
+      {resume && resume.success && (
+        <>
+          <Typography variant="h4" sx={{ mb: 3 }}>
+            {resume.resumeName}
+          </Typography>
+          <div dangerouslySetInnerHTML={{ __html: resume.content }} />
+        </>
       )}
     </Box>
   );
