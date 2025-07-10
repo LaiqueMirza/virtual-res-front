@@ -12,6 +12,124 @@ const ResumeView = () => {
   const [error, setError] = useState(null);
   const [parsedResume, setParsedResume] = useState(null);
 
+  // Function to get user's IP address using ipify API
+  const getUserIP = async () => {
+    try {
+      // Set a timeout for the fetch request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+      
+      const response = await fetch('https://api.ipify.org?format=json', {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      return data.ip;
+    } catch (error) {
+      console.error('Error fetching IP:', error);
+      // Try alternative IP API if first one fails
+      try {
+        const response = await fetch('https://api.db-ip.com/v2/free/self');
+        if (response.ok) {
+          const data = await response.json();
+          return data.ipAddress;
+        }
+      } catch (fallbackError) {
+        console.error('Fallback IP service also failed:', fallbackError);
+      }
+      return '0.0.0.0'; // Final fallback IP
+    }
+  };
+
+  // Function to get browser and device information
+  const getBrowserInfo = () => {
+    try {
+      const userAgent = navigator.userAgent || 'Unknown';
+      let browserName = 'Unknown';
+      let deviceType = 'Unknown';
+      
+      // Detect browser
+      if (userAgent.match(/chrome|chromium|crios/i)) {
+        browserName = 'Chrome';
+      } else if (userAgent.match(/firefox|fxios/i)) {
+        browserName = 'Firefox';
+      } else if (userAgent.match(/safari/i)) {
+        browserName = 'Safari';
+      } else if (userAgent.match(/opr\//i)) {
+        browserName = 'Opera';
+      } else if (userAgent.match(/edg/i)) {
+        browserName = 'Edge';
+      } else if (userAgent.match(/msie|trident/i)) {
+        browserName = 'Internet Explorer';
+      }
+      
+      // Detect device type
+      if (/(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(userAgent)) {
+        deviceType = 'Tablet';
+      } else if (/Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(userAgent)) {
+        deviceType = 'Mobile';
+      } else {
+        deviceType = 'Desktop';
+      }
+      
+      return { browserName, deviceType, userAgent };
+    } catch (error) {
+      console.error('Error getting browser info:', error);
+      return { browserName: 'Unknown', deviceType: 'Unknown', userAgent: 'Unknown' };
+    }
+  };
+
+  // Function to get user's location
+  const getUserLocation = async (ip) => {
+    try {
+      // Set a timeout for the fetch request
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3000); // 3 second timeout
+      
+      const response = await fetch(`https://ipapi.co/${ip}/json/`, {
+        signal: controller.signal
+      });
+      clearTimeout(timeoutId);
+      
+      if (!response.ok) {
+        throw new Error(`HTTP error! Status: ${response.status}`);
+      }
+      
+      const data = await response.json();
+      
+      // Check if the API returned an error
+      if (data.error) {
+        throw new Error(data.reason || 'API returned an error');
+      }
+      
+      return {
+        city: data.city || 'Unknown',
+        country: data.country_name || 'Unknown'
+      };
+    } catch (error) {
+      console.error('Error fetching location:', error);
+      // Try alternative location API if first one fails
+      try {
+        const response = await fetch(`https://ipinfo.io/${ip}/json`);
+        if (response.ok) {
+          const data = await response.json();
+          return {
+            city: data.city || 'Unknown',
+            country: data.country || 'Unknown'
+          };
+        }
+      } catch (fallbackError) {
+        console.error('Fallback location service also failed:', fallbackError);
+      }
+      return { city: 'Unknown', country: 'Unknown' };
+    }
+  };
+
   // Effect to fetch the resume data when the ID changes
   useEffect(() => {
     if (!id) {
@@ -22,25 +140,97 @@ const ResumeView = () => {
 
     const fetchResume = async () => {
       try {
-        // Get user's IP and location (in a real app, you would use a geolocation service)
-        // For demo purposes, we're using placeholder values
-        const userIP = '192.168.1.1';
-        const userCity = 'New York';
-        const userCountry = 'USA';
-
         console.log('Fetching resume with ID:', id);
+        
+        // Create a promise that will resolve with user information or reject after timeout
+        const getUserInfoWithTimeout = async (timeoutMs = 5000) => {
+          return Promise.race([
+            // The actual user info gathering
+            (async () => {
+              try {
+                const userIP = await getUserIP();
+                const { browserName, deviceType, userAgent } = getBrowserInfo();
+                const { city, country } = await getUserLocation(userIP);
+                
+                console.log('User info gathered successfully:', { 
+                  userIP, browserName, deviceType, city, country 
+                });
+                
+                return { 
+                  userIP, 
+                  browserName, 
+                  deviceType, 
+                  userAgent,
+                  city, 
+                  country,
+                  infoComplete: true
+                };
+              } catch (error) {
+                console.error('Error gathering complete user info:', error);
+                // Return partial info if available
+                const { browserName, deviceType, userAgent } = getBrowserInfo();
+                return { 
+                  userIP: '0.0.0.0', 
+                  browserName, 
+                  deviceType, 
+                  userAgent,
+                  city: 'Unknown', 
+                  country: 'Unknown',
+                  infoComplete: false
+                };
+              }
+            })(),
+            
+            // Timeout promise
+            new Promise((resolve) => {
+              setTimeout(() => {
+                console.log('User info gathering timed out, using fallback values');
+                const { browserName, deviceType, userAgent } = getBrowserInfo();
+                // Return partial info after timeout
+                resolve({ 
+                  userIP: '0.0.0.0', 
+                  browserName, 
+                  deviceType, 
+                  userAgent,
+                  city: 'Unknown', 
+                  country: 'Unknown',
+                  infoComplete: false
+                });
+              }, timeoutMs);
+            })
+          ]);
+        };
+        
+        // Get user info with a 5-second timeout
+        const userInfo = await getUserInfoWithTimeout(5000);
+        
+        // Prepare the request payload
+        const payload = {
+          resume_share_links_id: String(id), // Ensure ID is sent as a string
+          viewer_ip: userInfo.userIP,
+          device_type: userInfo.deviceType,
+          browser_info: `${userInfo.browserName} (${userInfo.userAgent})`,
+          location_city: userInfo.city,
+          location_country: userInfo.country
+        };
+        
+        console.log('Sending API request with payload:', payload);
+        
+        // Set a timeout for the API call
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
+        
+        // Make the API call with whatever info we have
         const response = await fetch('http://localhost:8000/v1/resume/preview', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({
-            resume_share_links_id: String(id), // Ensure ID is sent as a string
-            viewer_ip: userIP,
-            location_city: userCity,
-            location_country: userCountry
-          })
+          body: JSON.stringify(payload),
+          signal: controller.signal
         });
+        
+        clearTimeout(timeoutId);
         console.log('API response status:', response.status);
 
         if (!response.ok) {
