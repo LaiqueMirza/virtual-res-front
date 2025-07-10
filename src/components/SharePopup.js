@@ -61,16 +61,19 @@ const SharePopup = ({ open, onClose, resumeId, resumeName }) => {
     try {
       const emailList = emails.split(',').map(email => email.trim());
 
-      const response = await fetch('http://localhost:8000/v1/resume/share/email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          emails: emailList,
-          resume_template_id: resumeId
-        }),
-      });
+      const response = await fetch(
+				"http://localhost:8000/v1/resume/share/email",
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						emails: emailList,
+						resumes_uploaded_id: resumeId,
+					}),
+				}
+			);
 
       const data = await response.json();
 

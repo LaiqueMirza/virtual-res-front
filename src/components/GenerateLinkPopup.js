@@ -49,16 +49,19 @@ const GenerateLinkPopup = ({ open, onClose, resumeId, resumeName }) => {
     setSubmitError('');
 
     try {
-      const response = await fetch('http://localhost:8000/v1/resume/share/link', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          client_name: clientName,
-          resume_template_id: resumeId
-        }),
-      });
+      const response = await fetch(
+				"http://localhost:8000/v1/resume/share/link",
+				{
+					method: "POST",
+					headers: {
+						"Content-Type": "application/json",
+					},
+					body: JSON.stringify({
+						client_name: clientName,
+						resumes_uploaded_id: resumeId,
+					}),
+				}
+			);
 
       const {data} = await response.json();
       console.log(data, "data");

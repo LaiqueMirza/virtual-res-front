@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+    <html lang="en">
+        <head>
+            <meta charset="utf-8" />
+            <title>Dynamic Résumé</title>
+            <meta name="viewport" content="width=device-width,initial-scale=1" />
+            <style>
+                /* ===== base layout ===== */
+                body {
+                    font-family: system-ui, Arial, Helvetica, sans-serif;
+                    margin: 0;
+                    padding: 0;
+                    color: #111;
+                }
+                .page {
+                    max-width: 780px;
+                    margin: 0 auto;
+                    padding: 2rem 2.2rem;
+                }
+                h1,
+                h2,
+                h3 {
+                    margin: 0 0 0.4rem;
+                    font-weight: 700;
+                }
+                h1 {
+                    font-size: 1.75rem;
+                }
+                h2 {
+                    font-size: 1.25rem;
+                    margin-top: 1.1rem;
+                    border-bottom: 1px solid #ccc;
+                    padding-bottom: 0.2rem;
+                }
+                h3 {
+                    font-size: 1.05rem;
+                    margin-top: 0.8rem;
+                }
+                ul {
+                    margin: 0.3rem 0 0.9rem 1.4rem;
+                    padding: 0;
+                }
+                li {
+                    margin: 0.25rem 0;
+                }
+                .meta {
+                    font-style: italic;
+                    margin-bottom: 0.8rem;
+                }
+                .two-col {
+                    display: flex;
+                    justify-content: space-between;
+                    gap: 1rem;
+                }
+                .right {
+                    text-align: right;
+                }
+                .tags {
+                    display: flex;
+                    flex-wrap: wrap;
+                    gap: 0.4rem;
+                }
+                .tag {
+                    background: #e7f1ff;
+                    padding: 0.15rem 0.5rem;
+                    border-radius: 0.3rem;
+                    font-size: 0.8rem;
+                }
+
+                /* ===== print friendliness ===== */
+                @media print {
+                    body {
+                        margin: 0;
+                    }
+                    .page {
+                        page-break-after: always;
+                    }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="page">
+                <!-- Header -->
+                <h1>Rakesh Resume</h1>
+                <div class="meta">Senior Early-Childhood Development Specialist</div>
+                <div class="meta">2002 Front Range Way, Fort Collins CO 80525<br>+1 (970) 555-0193 • <a href="mailto:jwsmith@example.com">jwsmith@example.com</a></div>
+
+                <!-- Career Summary -->
+                <h2>Career Summary</h2>
+                <p>Early-childhood educator and program manager with 12 years’ experience leading multidisciplinary teams, designing evidence-based curricula, and securing > $1 million in grant funding. Passionate about inclusive learning environments.</p>
+
+                <!-- Skills -->
+                <h2>Key Skills</h2>
+                <div class="tags">
+                    <span class="tag">Curriculum Design</span><span class="tag">IEP Compliance</span><span class="tag">Team Leadership</span><span class="tag">Grant Writing</span><span class="tag">ASL (Basic)</span><span class="tag">Google Workspace</span><span class="tag">Airtable</span><span class="tag">Tableau</span><span class="tag">First Aid/CPR</span>
+                </div>
+
+                <!-- Achievements -->
+                <h2>Achievements</h2>
+                <ul>
+                    <li>2024 — *NASET Outstanding Program Innovation Award*</li><li>2022 — Secured $450 000 DOE grant for rural early-learning initiatives</li><li>2021 — Speaker at SXSW EDU: "Designing Sensory-Rich STEM Labs"</li>
+                </ul>
+
+                <!-- Employment History -->
+                <h2>Employment History</h2>
+                
+                    <div>
+                        <h3>Program Director – Rainbow Special Care Center</h3>
+                        <div class="meta">2016-03 – Present | Little Rock, AR</div>
+                        <ul>
+                            <li>Oversee daily operations for a 120-child special-needs facility with a staff of 45.</li><li>Launched a STEM-based sensory curriculum adopted by 4 partner schools.</li><li>Reduced staff turnover from 22 % to 9 % via mentorship & quarterly workshops.</li>
+                        </ul>
+                    </div>
+                
+                    <div>
+                        <h3>Counseling Supervisor – The Wesley Center</h3>
+                        <div class="meta">2011-06 – 2016-02 | Little Rock, AR</div>
+                        <ul>
+                            <li>Managed caseloads for 150 adult clients with developmental disabilities.</li><li>Implemented digital record-keeping that cut documentation time by 35 %.</li>
+                        </ul>
+                    </div>
+                
+                    <div>
+                        <h3>Client Specialist – Cowell Elementary School</h3>
+                        <div class="meta">2005-08 – 2011-05 | Conway, AR</div>
+                        <ul>
+                            <li>Co-taught inclusive classrooms (K-5) with focus on adaptive technology.</li><li>Trained 25+ teachers on IEP compliance and differentiated instruction.</li>
+                        </ul>
+                    </div>
+                
+
+                <!-- Projects -->
+                <h2>Selected Projects</h2>
+                
+                    <div>
+                        <h3>Inclusive Play Toolkit</h3>
+                        <div class="meta">2023 • Figma, Canva, Google Sites</div>
+                        <p>Open-source library of 50+ sensory-friendly classroom activities, downloaded 12 000 times globally.</p>
+                    </div>
+                
+                    <div>
+                        <h3>GrantTrack CRM</h3>
+                        <div class="meta">2020 • Airtable, Make.com, Zapier</div>
+                        <p>Custom Airtable/Make.com workflow that tracks grant applications and automates reminders; improved funding hit-rate by 18 %.</p>
+                    </div>
+                
+
+                <!-- Education -->
+                <h2>Education</h2>
+                
+                    <div>
+                        <h3>M.Ed. Early Childhood Education, 2001</h3>
+                        <div class="meta">University of Arkansas at Little Rock, Little Rock, AR</div>
+                        
+                            <ul>
+                                <li>Dean’s List six consecutive semesters</li><li>Graduate Assistant, Child Development Lab</li>
+                            </ul>
+                        
+                    </div>
+                
+                    <div>
+                        <h3>B.S. Early Childhood Development, 1999</h3>
+                        <div class="meta">University of Arkansas at Little Rock, Little Rock, AR</div>
+                        
+                    </div>
+                
+            </div>
+        </body>
+    </html>
+    
