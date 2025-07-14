@@ -13,7 +13,16 @@ const ResumeList = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`http://localhost:8000/v1/resume/resume_lists?page=${pageNum}`);
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/resume_lists`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          page: pageNum,
+          limit: 10
+        })
+      });
       if (!response.ok) {
         throw new Error(`Failed to fetch resumes: ${response.status}`);
       }

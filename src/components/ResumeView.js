@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Box, Typography, CircularProgress, Paper } from '@mui/material';
 
@@ -11,7 +11,52 @@ const ResumeView = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [parsedResume, setParsedResume] = useState(null);
+  
+  // Refs for tracking elements
+  const resumeContainerRef = useRef(null);
+  const sectionRefs = useRef({});
+  
+  // Engagement tracking states
+  const [scrollDepthData, setScrollDepthData] = useState({
+    thresholds: {
+      25: false,
+      50: false,
+      75: false,
+      100: false
+    },
+    maxScrollDepth: 0,
+    lastScrollTimestamp: null
+  });
+  
+  const [sectionVisibility, setSectionVisibility] = useState({});
+  const [clickInteractions, setClickInteractions] = useState([]);
+  
+  // Store section entry/exit timestamps
+  const [sectionEngagement, setSectionEngagement] = useState({});
+  
+  // Tracking session start time
+  const sessionStartTime = useRef(Date.now());
 
+  // Function to send engagement data to analytics backend
+  const sendEngagementData = (eventType, eventData) => {
+    // This is a placeholder function that would send data to your analytics backend
+    // For now, we'll just log it to the console
+    console.log(`Analytics event: ${eventType}`, eventData);
+    
+    // In a real implementation, you would send this data to your backend
+    // Example:
+    // fetch(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/engagement`, {
+    //   method: 'POST',
+    //   headers: { 'Content-Type': 'application/json' },
+    //   body: JSON.stringify({
+    //     resume_share_links_id: id,
+    //     event_type: eventType,
+    //     event_data: eventData,
+    //     timestamp: Date.now()
+    //   })
+    // });
+  };
+  
   // Function to get user's IP address using ipify API
   const getUserIP = async () => {
     try {
@@ -221,7 +266,7 @@ const ResumeView = () => {
         const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
         
         // Make the API call with whatever info we have
-        const response = await fetch('http://localhost:8000/v1/resume/preview', {
+        const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/preview`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -258,6 +303,161 @@ const ResumeView = () => {
     fetchResume();
   }, [id]);
 
+  // Utility functions for tracking user engagement
+  
+  // Track scroll depth
+  const trackScrollDepth = () => {
+    if (!resumeContainerRef.current) return;
+    
+    const container = resumeContainerRef.current;
+    const containerHeight = container.scrollHeight - container.clientHeight;
+    const scrollPosition = container.scrollTop;
+    const scrollPercentage = Math.floor((scrollPosition / containerHeight) * 100);
+    
+    // Update max scroll depth
+    setScrollDepthData(prev => ({
+      ...prev,
+      maxScrollDepth: Math.max(prev.maxScrollDepth, scrollPercentage),
+      lastScrollTimestamp: Date.now()
+    }));
+    
+    // Check if we've passed any thresholds
+    const thresholds = [25, 50, 75, 100];
+    thresholds.forEach(threshold => {
+      if (scrollPercentage >= threshold && !scrollDepthData.thresholds[threshold]) {
+        // Record that we've passed this threshold
+        setScrollDepthData(prev => ({
+          ...prev,
+          thresholds: {
+            ...prev.thresholds,
+            [threshold]: true
+          }
+        }));
+        
+        // Log the event and send to analytics
+        console.log(`Scroll threshold reached: ${threshold}%`);
+        sendEngagementData('scroll_depth', { 
+          threshold, 
+          timestamp: Date.now(),
+          resume_id: id
+        });
+      }
+    });
+  };
+  
+  // Track section visibility
+  const trackSectionVisibility = () => {
+    if (!resumeContainerRef.current) return;
+    
+    const container = resumeContainerRef.current;
+    const containerTop = container.scrollTop;
+    const containerBottom = containerTop + container.clientHeight;
+    const containerHeight = container.scrollHeight;
+    
+    // Check each section's visibility
+    Object.entries(sectionRefs.current).forEach(([sectionId, sectionRef]) => {
+      if (!sectionRef) return;
+      
+      const sectionRect = sectionRef.getBoundingClientRect();
+      const containerRect = container.getBoundingClientRect();
+      
+      // Calculate section position relative to the container
+      const sectionTop = sectionRect.top - containerRect.top + container.scrollTop;
+      const sectionBottom = sectionTop + sectionRect.height;
+      
+      // Check if section is visible
+      const isVisible = 
+        (sectionTop < containerBottom && sectionBottom > containerTop) &&
+        (sectionTop < containerHeight && sectionBottom > 0);
+      
+      // Update section visibility state
+      setSectionVisibility(prev => {
+        // If visibility changed, update engagement metrics
+        if (prev[sectionId] !== isVisible) {
+          const timestamp = Date.now();
+          
+          // If section became visible, record entry time
+          if (isVisible) {
+            setSectionEngagement(prev => ({
+              ...prev,
+              [sectionId]: {
+                ...prev[sectionId],
+                entryTime: timestamp,
+                // Reset exit time when re-entering
+                exitTime: null
+              }
+            }));
+            console.log(`Section entered: ${sectionId}`);
+            sendEngagementData('section_enter', {
+              section_id: sectionId,
+              timestamp: timestamp,
+              resume_id: id
+            });
+          } 
+          // If section is no longer visible and had an entry time, record exit time and duration
+          else if (sectionEngagement[sectionId]?.entryTime) {
+            const entryTime = sectionEngagement[sectionId].entryTime;
+            const duration = timestamp - entryTime;
+            
+            setSectionEngagement(prev => ({
+              ...prev,
+              [sectionId]: {
+                ...prev[sectionId],
+                exitTime: timestamp,
+                duration: (prev[sectionId]?.duration || 0) + duration
+              }
+            }));
+            console.log(`Section exited: ${sectionId}, duration: ${duration}ms`);
+            sendEngagementData('section_exit', {
+              section_id: sectionId,
+              duration: duration,
+              timestamp: timestamp,
+              resume_id: id
+            });
+          }
+        }
+        
+        return { ...prev, [sectionId]: isVisible };
+      });
+    });
+  };
+  
+  // Track click interactions
+  const trackClickInteraction = (event) => {
+    // Only track clicks on links
+    if (event.target.tagName.toLowerCase() === 'a') {
+      const link = event.target;
+      const url = link.href;
+      const isExternal = link.hostname !== window.location.hostname;
+      const timestamp = Date.now();
+      
+      // Find which section contains this link
+      let sectionId = 'unknown';
+      Object.entries(sectionRefs.current).forEach(([id, ref]) => {
+        if (ref && ref.contains(link)) {
+          sectionId = id;
+        }
+      });
+      
+      // Record the click interaction
+      const clickData = {
+        url,
+        isExternal,
+        timestamp,
+        sectionId
+      };
+      
+      setClickInteractions(prev => [...prev, clickData]);
+      console.log('Link clicked:', clickData);
+      
+      // Send to analytics backend
+      sendEngagementData('link_click', {
+        ...clickData,
+        resume_id: id
+      });
+    }
+  };
+  
   // Effect to parse resume data when it changes
   useEffect(() => {
     console.log('Resume state changed:', resume);
@@ -296,6 +496,104 @@ const ResumeView = () => {
       }
     }
   }, [resume]);
+  
+  // Initialize section refs when resume data is loaded
+  useEffect(() => {
+    if (!parsedResume) return;
+    
+    // Define the sections we want to track
+    const sectionIds = [
+      'header',
+      'career-summary',
+      'skills',
+      'achievements',
+      'employment-history',
+      'projects',
+      'education'
+    ];
+    
+    // Initialize section engagement data
+    const initialSectionEngagement = {};
+    sectionIds.forEach(id => {
+      initialSectionEngagement[id] = {
+        entryTime: null,
+        exitTime: null,
+        duration: 0,
+        visits: 0
+      };
+    });
+    
+    setSectionEngagement(initialSectionEngagement);
+    setSectionVisibility(sectionIds.reduce((acc, id) => ({ ...acc, [id]: false }), {}));
+    
+    console.log('Section tracking initialized');
+  }, [parsedResume]);
+  
+  // Set up event listeners for tracking
+  useEffect(() => {
+    // Skip if still loading or there's an error
+    if (loading || error || !parsedResume || !resumeContainerRef.current) return;
+    
+    const container = resumeContainerRef.current;
+    
+    // Throttle function to limit how often the scroll handler fires
+    const throttle = (callback, delay) => {
+      let lastCall = 0;
+      return function(...args) {
+        const now = Date.now();
+        if (now - lastCall >= delay) {
+          lastCall = now;
+          callback(...args);
+        }
+      };
+    };
+    
+    // Throttled scroll handler
+    const handleScroll = throttle(() => {
+      trackScrollDepth();
+      trackSectionVisibility();
+    }, 200); // 200ms throttle
+    
+    // Click handler
+    const handleClick = (e) => {
+      trackClickInteraction(e);
+    };
+    
+    // Add event listeners
+    container.addEventListener('scroll', handleScroll);
+    container.addEventListener('click', handleClick);
+    
+    // Initial tracking call
+    handleScroll();
+    
+    // Clean up event listeners on unmount
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      container.removeEventListener('click', handleClick);
+      
+      // On unmount, record final engagement metrics
+      const sessionEndTime = Date.now();
+      const totalSessionDuration = sessionEndTime - sessionStartTime.current;
+      
+      // Log final engagement metrics
+      console.log('Session ended. Total duration:', totalSessionDuration, 'ms');
+      console.log('Max scroll depth:', scrollDepthData.maxScrollDepth, '%');
+      console.log('Section engagement:', sectionEngagement);
+      console.log('Click interactions:', clickInteractions);
+      
+      // Send final engagement data to analytics backend
+      sendEngagementData('session_end', { 
+        duration: totalSessionDuration,
+        max_scroll_depth: scrollDepthData.maxScrollDepth,
+        section_engagement: sectionEngagement,
+        click_interactions: clickInteractions.length,
+        thresholds_reached: Object.entries(scrollDepthData.thresholds)
+          .filter(([_, reached]) => reached)
+          .map(([threshold]) => parseInt(threshold)),
+        resume_id: id
+      });
+    };
+  }, [loading, error, parsedResume, scrollDepthData.thresholds, sectionEngagement]);
 
   if (loading) {
     return (
@@ -329,130 +627,168 @@ const ResumeView = () => {
       {parsedResume && (
         <Paper 
           elevation={1}
+          ref={resumeContainerRef}
           sx={{ 
             maxWidth: '780px', 
             margin: '0 auto',
             padding: '2rem',
-            backgroundColor: '#fff'
+            backgroundColor: '#fff',
+            // maxHeight: '80vh',
+            overflowY: 'auto'
           }}
         >
           {/* Header */}
-          <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
-            {parsedResume.basics.name}
-          </Typography>
-          
-          <Typography variant="body1" sx={{ fontStyle: 'italic', mb: 0.5 }}>
-            {parsedResume.basics.headline}
-          </Typography>
-          
-          <Typography variant="body1" sx={{ fontStyle: 'italic', mb: 2 }}>
-            {parsedResume.basics.address}<br />
-            {parsedResume.basics.phone} • <a href={`mailto:${parsedResume.basics.email}`}>{parsedResume.basics.email}</a>
-          </Typography>
+          <Box 
+            id="header" 
+            ref={el => sectionRefs.current['header'] = el}
+          >
+            <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
+              {parsedResume.basics.name}
+            </Typography>
+            
+            <Typography variant="body1" sx={{ fontStyle: 'italic', mb: 0.5 }}>
+              {parsedResume.basics.headline}
+            </Typography>
+            
+            <Typography variant="body1" sx={{ fontStyle: 'italic', mb: 2 }}>
+              {parsedResume.basics.address}<br />
+              {parsedResume.basics.phone} • <a href={`mailto:${parsedResume.basics.email}`}>{parsedResume.basics.email}</a>
+            </Typography>
+          </Box>
 
           {/* Career Summary */}
-          <Typography variant="h5" sx={{ fontWeight: 700, mt: 3, mb: 1, borderBottom: '1px solid #ccc', pb: 0.5 }}>
-            Career Summary
-          </Typography>
-          <Typography variant="body1" paragraph>
-            {parsedResume.careerSummary}
-          </Typography>
+          <Box 
+            id="career-summary" 
+            ref={el => sectionRefs.current['career-summary'] = el}
+          >
+            <Typography variant="h5" sx={{ fontWeight: 700, mt: 3, mb: 1, borderBottom: '1px solid #ccc', pb: 0.5 }}>
+              Career Summary
+            </Typography>
+            <Typography variant="body1" paragraph>
+              {parsedResume.careerSummary}
+            </Typography>
+          </Box>
 
           {/* Skills */}
-          <Typography variant="h5" sx={{ fontWeight: 700, mt: 3, mb: 1, borderBottom: '1px solid #ccc', pb: 0.5 }}>
-            Key Skills
-          </Typography>
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
-            {parsedResume.skills.map((skill, index) => (
-              <Box 
-                key={index}
-                sx={{ 
-                  backgroundColor: '#e7f1ff', 
-                  padding: '0.15rem 0.5rem', 
-                  borderRadius: '0.3rem',
-                  fontSize: '0.8rem'
-                }}
-              >
-                {skill}
-              </Box>
-            ))}
+          <Box 
+            id="skills" 
+            ref={el => sectionRefs.current['skills'] = el}
+          >
+            <Typography variant="h5" sx={{ fontWeight: 700, mt: 3, mb: 1, borderBottom: '1px solid #ccc', pb: 0.5 }}>
+              Key Skills
+            </Typography>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
+              {parsedResume.skills.map((skill, index) => (
+                <Box 
+                  key={index}
+                  sx={{ 
+                    backgroundColor: '#e7f1ff', 
+                    padding: '0.15rem 0.5rem', 
+                    borderRadius: '0.3rem',
+                    fontSize: '0.8rem'
+                  }}
+                >
+                  {skill}
+                </Box>
+              ))}
+            </Box>
           </Box>
 
           {/* Achievements */}
-          <Typography variant="h5" sx={{ fontWeight: 700, mt: 3, mb: 1, borderBottom: '1px solid #ccc', pb: 0.5 }}>
-            Achievements
-          </Typography>
-          <Box component="ul" sx={{ ml: 3, mb: 2 }}>
-            {parsedResume.achievements.map((achievement, index) => (
-              <Box component="li" key={index} sx={{ mb: 0.5 }}>
-                <Typography variant="body1">{achievement}</Typography>
+          <Box 
+            id="achievements" 
+            ref={el => sectionRefs.current['achievements'] = el}
+          >
+            <Typography variant="h5" sx={{ fontWeight: 700, mt: 3, mb: 1, borderBottom: '1px solid #ccc', pb: 0.5 }}>
+              Achievements
+            </Typography>
+            <Box component="ul" sx={{ ml: 3, mb: 2 }}>
+              {parsedResume.achievements.map((achievement, index) => (
+                <Box component="li" key={index} sx={{ mb: 0.5 }}>
+                  <Typography variant="body1">{achievement}</Typography>
+                </Box>
+              ))}
+            </Box>
+          </Box>
+
+          {/* Employment History */}
+          <Box 
+            id="employment-history" 
+            ref={el => sectionRefs.current['employment-history'] = el}
+          >
+            <Typography variant="h5" sx={{ fontWeight: 700, mt: 3, mb: 1, borderBottom: '1px solid #ccc', pb: 0.5 }}>
+              Employment History
+            </Typography>
+            {parsedResume.employmentHistory.map((job, jobIndex) => (
+              <Box key={jobIndex} sx={{ mb: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  {job.title} – {job.company}
+                </Typography>
+                <Typography variant="body2" sx={{ fontStyle: 'italic', mb: 1 }}>
+                  {job.start} – {job.end} | {job.location}
+                </Typography>
+                <Box component="ul" sx={{ ml: 3 }}>
+                  {job.bullets.map((bullet, bulletIndex) => (
+                    <Box component="li" key={bulletIndex} sx={{ mb: 0.5 }}>
+                      <Typography variant="body1">{bullet}</Typography>
+                    </Box>
+                  ))}
+                </Box>
               </Box>
             ))}
           </Box>
 
-          {/* Employment History */}
-          <Typography variant="h5" sx={{ fontWeight: 700, mt: 3, mb: 1, borderBottom: '1px solid #ccc', pb: 0.5 }}>
-            Employment History
-          </Typography>
-          {parsedResume.employmentHistory.map((job, jobIndex) => (
-            <Box key={jobIndex} sx={{ mb: 2 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
-                {job.title} – {job.company}
-              </Typography>
-              <Typography variant="body2" sx={{ fontStyle: 'italic', mb: 1 }}>
-                {job.start} – {job.end} | {job.location}
-              </Typography>
-              <Box component="ul" sx={{ ml: 3 }}>
-                {job.bullets.map((bullet, bulletIndex) => (
-                  <Box component="li" key={bulletIndex} sx={{ mb: 0.5 }}>
-                    <Typography variant="body1">{bullet}</Typography>
-                  </Box>
-                ))}
-              </Box>
-            </Box>
-          ))}
-
           {/* Projects */}
-          <Typography variant="h5" sx={{ fontWeight: 700, mt: 3, mb: 1, borderBottom: '1px solid #ccc', pb: 0.5 }}>
-            Selected Projects
-          </Typography>
-          {parsedResume.projects.map((project, projectIndex) => (
-            <Box key={projectIndex} sx={{ mb: 2 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
-                {project.name}
-              </Typography>
-              <Typography variant="body2" sx={{ fontStyle: 'italic', mb: 1 }}>
-                {project.period} • {project.tech.join(', ')}
-              </Typography>
-              <Typography variant="body1" paragraph>
-                {project.description}
-              </Typography>
-            </Box>
-          ))}
+          <Box 
+            id="projects" 
+            ref={el => sectionRefs.current['projects'] = el}
+          >
+            <Typography variant="h5" sx={{ fontWeight: 700, mt: 3, mb: 1, borderBottom: '1px solid #ccc', pb: 0.5 }}>
+              Selected Projects
+            </Typography>
+            {parsedResume.projects.map((project, projectIndex) => (
+              <Box key={projectIndex} sx={{ mb: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  {project.name}
+                </Typography>
+                <Typography variant="body2" sx={{ fontStyle: 'italic', mb: 1 }}>
+                  {project.period} • {project.tech.join(', ')}
+                </Typography>
+                <Typography variant="body1" paragraph>
+                  {project.description}
+                </Typography>
+              </Box>
+            ))}
+          </Box>
 
           {/* Education */}
-          <Typography variant="h5" sx={{ fontWeight: 700, mt: 3, mb: 1, borderBottom: '1px solid #ccc', pb: 0.5 }}>
-            Education
-          </Typography>
-          {parsedResume.education.map((edu, eduIndex) => (
-            <Box key={eduIndex} sx={{ mb: 2 }}>
-              <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
-                {edu.degree}, {edu.year}
-              </Typography>
-              <Typography variant="body2" sx={{ fontStyle: 'italic', mb: 1 }}>
-                {edu.institution}, {edu.location}
-              </Typography>
-              {edu.highlights && (
-                <Box component="ul" sx={{ ml: 3 }}>
-                  {edu.highlights.map((highlight, highlightIndex) => (
-                    <Box component="li" key={highlightIndex} sx={{ mb: 0.5 }}>
-                      <Typography variant="body1">{highlight}</Typography>
-                    </Box>
-                  ))}
-                </Box>
-              )}
-            </Box>
-          ))}
+          <Box 
+            id="education" 
+            ref={el => sectionRefs.current['education'] = el}
+          >
+            <Typography variant="h5" sx={{ fontWeight: 700, mt: 3, mb: 1, borderBottom: '1px solid #ccc', pb: 0.5 }}>
+              Education
+            </Typography>
+            {parsedResume.education.map((edu, eduIndex) => (
+              <Box key={eduIndex} sx={{ mb: 2 }}>
+                <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+                  {edu.degree}, {edu.year}
+                </Typography>
+                <Typography variant="body2" sx={{ fontStyle: 'italic', mb: 1 }}>
+                  {edu.institution}, {edu.location}
+                </Typography>
+                {edu.highlights && (
+                  <Box component="ul" sx={{ ml: 3 }}>
+                    {edu.highlights.map((highlight, highlightIndex) => (
+                      <Box component="li" key={highlightIndex} sx={{ mb: 0.5 }}>
+                        <Typography variant="body1">{highlight}</Typography>
+                      </Box>
+                    ))}
+                  </Box>
+                )}
+              </Box>
+            ))}
+          </Box>
         </Paper>
       )}
     </Box>

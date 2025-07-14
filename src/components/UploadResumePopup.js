@@ -83,7 +83,7 @@ const UploadResumePopup = ({ open, onClose }) => {
       formData.append('file', file);
       formData.append('resumeName', resumeName);
 
-      const response = await fetch('http://localhost:8000/v1/resume/upload', {
+      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/upload`, {
         method: 'POST',
         body: formData,
       });

@@ -50,7 +50,7 @@ const GenerateLinkPopup = ({ open, onClose, resumeId, resumeName }) => {
 
     try {
       const response = await fetch(
-				"http://localhost:8000/v1/resume/share/link",
+				`${process.env.REACT_APP_API_BASE_URL}/v1/resume/share/link`,
 				{
 					method: "POST",
 					headers: {
@@ -69,7 +69,7 @@ const GenerateLinkPopup = ({ open, onClose, resumeId, resumeName }) => {
         throw new Error(data.message || 'Failed to generate link');
       }
 
-      const shareLink = `http://localhost:3000/view/${data.share_link_id}`;
+      const shareLink = `${process.env.REACT_APP_FRONTEND_URL}/view/${data.share_link_id}`;
       setGeneratedLink(shareLink);
     } catch (error) {
       console.error('Error generating link:', error);

@@ -62,7 +62,7 @@ const SharePopup = ({ open, onClose, resumeId, resumeName }) => {
       const emailList = emails.split(',').map(email => email.trim());
 
       const response = await fetch(
-				"http://localhost:8000/v1/resume/share/email",
+				`${process.env.REACT_APP_API_BASE_URL}/v1/resume/share/email`,
 				{
 					method: "POST",
 					headers: {
