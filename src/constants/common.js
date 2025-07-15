@@ -1,12 +1,10 @@
 export const resumePreviewTemplate = (jsonString) => {
-    console.log('resumePreviewTemplate received jsonString:', jsonString);
     try {
         // Parse the JSON string to get the resume data
         let cv;
         
         // First check if jsonString is already an object
         if (typeof jsonString === 'object' && jsonString !== null) {
-            console.log('jsonString is already an object');
             cv = jsonString;
         } else {
             try {
@@ -22,7 +20,6 @@ export const resumePreviewTemplate = (jsonString) => {
                 cv = JSON.parse(jsonString);
             }
         }
-        console.log("Parsed resume data:", cv);
         
         return `
     <!DOCTYPE html>

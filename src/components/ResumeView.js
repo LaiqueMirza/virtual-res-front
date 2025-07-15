@@ -1,12 +1,11 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom'; // Removed useNavigate since it's not used
 import { Box, Typography, CircularProgress, Paper } from '@mui/material';
 
 // Resume view component that renders a resume using Material-UI components
 
 const ResumeView = () => {
-  const { id } = useParams();
-  const navigate = useNavigate();
+  const { id } = useParams(); // Removed navigate since it's not used
   const [resume, setResume] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -15,6 +14,7 @@ const ResumeView = () => {
   // Refs for tracking elements
   const resumeContainerRef = useRef(null);
   const sectionRefs = useRef({});
+  const observersRef = useRef({});
   
   // Engagement tracking states
   const [scrollDepthData, setScrollDepthData] = useState({
@@ -25,10 +25,12 @@ const ResumeView = () => {
       100: false
     },
     maxScrollDepth: 0,
-    lastScrollTimestamp: null
+    lastScrollTimestamp: null,
+    hasUserScrolled: false // Flag to track if user has actually scrolled
   });
   
-  const [sectionVisibility, setSectionVisibility] = useState({});
+  // We're using IntersectionObserver instead of state for section visibility
+  // const [sectionVisibility, setSectionVisibility] = useState({});
   const [clickInteractions, setClickInteractions] = useState([]);
   
   // Store section entry/exit timestamps
@@ -38,10 +40,12 @@ const ResumeView = () => {
   const sessionStartTime = useRef(Date.now());
 
   // Function to send engagement data to analytics backend
-  const sendEngagementData = (eventType, eventData) => {
+  // Wrapped in useCallback to prevent recreation on every render
+  const sendEngagementData = React.useCallback((eventType, eventData) => {
+  
     // This is a placeholder function that would send data to your analytics backend
     // For now, we'll just log it to the console
-    console.log(`Analytics event: ${eventType}`, eventData);
+    // Removed console.log to reduce console output
     
     // In a real implementation, you would send this data to your backend
     // Example:
@@ -55,7 +59,99 @@ const ResumeView = () => {
     //     timestamp: Date.now()
     //   })
     // });
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]); // 'id' is needed for the commented code
+
+  // Function to set up IntersectionObserver for section visibility tracking
+  // Wrapped in useCallback to prevent recreation on every render
+  const setupSectionObservers = React.useCallback(() => {
+    // Clean up any existing observers
+    Object.entries(observersRef.current).forEach(([key, value]) => {
+      // Only call disconnect on actual IntersectionObserver objects, not on visibility flags
+      if (value && typeof value === 'object' && typeof value.disconnect === 'function') {
+        value.disconnect();
+      }
+    });
+    
+    // Reset observers ref
+    observersRef.current = {};
+    
+    // Create new observers for each section
+    Object.entries(sectionRefs.current).forEach(([sectionId, sectionRef]) => {
+      if (!sectionRef) return;
+      
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach(entry => {
+            const isVisible = entry.isIntersecting;
+            const timestamp = Date.now();
+            
+            // Track visibility changes directly without using sectionVisibility state
+            // We'll use a local variable to track previous visibility state
+            const prevVisibilityRef = observersRef.current[`${sectionId}_visible`] || false;
+            
+            // If visibility changed, update engagement metrics
+            if (prevVisibilityRef !== isVisible) {
+              // Store current visibility state for future reference
+              observersRef.current[`${sectionId}_visible`] = isVisible;
+              
+              // If section became visible, record entry time
+              if (isVisible) {
+                setSectionEngagement(prev => ({
+                  ...prev,
+                  [sectionId]: {
+                    ...prev[sectionId],
+                    entryTime: timestamp,
+                    // Reset exit time when re-entering
+                    exitTime: null
+                  }
+                }));
+                
+                // Log and send analytics for section entry
+                // No need to check if user has scrolled - we want to track initial visibility too
+                // Removed console.log to reduce console output
+                sendEngagementData('section_enter', {
+                  section_id: sectionId,
+                  timestamp: timestamp,
+                  resume_id: id
+                });
+              } 
+              // If section is no longer visible and had an entry time, record exit time and duration
+              else if (sectionEngagement[sectionId]?.entryTime) {
+                const entryTime = sectionEngagement[sectionId].entryTime;
+                const duration = timestamp - entryTime;
+                
+                setSectionEngagement(prev => ({
+                  ...prev,
+                  [sectionId]: {
+                    ...prev[sectionId],
+                    exitTime: timestamp,
+                    duration: (prev[sectionId]?.duration || 0) + duration
+                  }
+                }));
+                // Removed console.log to reduce console output
+                sendEngagementData('section_exit', {
+                  section_id: sectionId,
+                  duration: duration,
+                  timestamp: timestamp,
+                  resume_id: id
+                });
+              }
+            }
+          });
+        },
+        { threshold: 0.1 } // Consider section visible when 10% is in viewport
+      );
+      
+      // Start observing the section
+      observer.observe(sectionRef);
+      
+      // Store the observer reference
+      observersRef.current[sectionId] = observer;
+    });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, sendEngagementData]); // Removed sectionEngagement dependency to prevent re-renders
+  // Original: [sectionEngagement, sendEngagementData, id]
   
   // Function to get user's IP address using ipify API
   const getUserIP = async () => {
@@ -185,7 +281,7 @@ const ResumeView = () => {
 
     const fetchResume = async () => {
       try {
-        console.log('Fetching resume with ID:', id);
+        // console.log('Fetching resume with ID:', id);
         
         // Create a promise that will resolve with user information or reject after timeout
         const getUserInfoWithTimeout = async (timeoutMs = 5000) => {
@@ -197,9 +293,9 @@ const ResumeView = () => {
                 const { browserName, deviceType, userAgent } = getBrowserInfo();
                 const { city, country } = await getUserLocation(userIP);
                 
-                console.log('User info gathered successfully:', { 
-                  userIP, browserName, deviceType, city, country 
-                });
+                // console.log('User info gathered successfully:', { 
+                  // userIP, browserName, deviceType, city, country 
+                // });
                 
                 return { 
                   userIP, 
@@ -229,7 +325,7 @@ const ResumeView = () => {
             // Timeout promise
             new Promise((resolve) => {
               setTimeout(() => {
-                console.log('User info gathering timed out, using fallback values');
+                // console.log('User info gathering timed out, using fallback values');
                 const { browserName, deviceType, userAgent } = getBrowserInfo();
                 // Return partial info after timeout
                 resolve({ 
@@ -259,7 +355,7 @@ const ResumeView = () => {
           location_country: userInfo.country
         };
         
-        console.log('Sending API request with payload:', payload);
+        // console.log('Sending API request with payload:', payload);
         
         // Set a timeout for the API call
         const controller = new AbortController();
@@ -276,7 +372,7 @@ const ResumeView = () => {
         });
         
         clearTimeout(timeoutId);
-        console.log('API response status:', response.status);
+        // console.log('API response status:', response.status);
 
         if (!response.ok) {
           const errorData = await response.json();
@@ -284,7 +380,7 @@ const ResumeView = () => {
         }
 
         const responseData = await response.json();
-        console.log('API response data:', responseData);
+        // console.log('API response data:', responseData);
         
         const {data} = responseData;
         setResume(data);
@@ -306,19 +402,24 @@ const ResumeView = () => {
   // Utility functions for tracking user engagement
   
   // Track scroll depth
-  const trackScrollDepth = () => {
+  // Wrapped in useCallback to prevent recreation on every render
+  const trackScrollDepth = React.useCallback(() => {
     if (!resumeContainerRef.current) return;
     
-    const container = resumeContainerRef.current;
-    const containerHeight = container.scrollHeight - container.clientHeight;
-    const scrollPosition = container.scrollTop;
-    const scrollPercentage = Math.floor((scrollPosition / containerHeight) * 100);
+    const container = document.documentElement || document.body;
+    const containerHeight = container.scrollHeight - window.innerHeight;
+    const scrollPosition = window.scrollY || window.pageYOffset;
+    // Removed console.log to reduce console output
     
-    // Update max scroll depth
+    // Prevent division by zero which causes NaN
+    const scrollPercentage = containerHeight > 0 ? Math.floor((scrollPosition / containerHeight) * 100) : 0;
+    
+    // Update max scroll depth and mark that user has scrolled
     setScrollDepthData(prev => ({
       ...prev,
       maxScrollDepth: Math.max(prev.maxScrollDepth, scrollPercentage),
-      lastScrollTimestamp: Date.now()
+      lastScrollTimestamp: Date.now(),
+      hasUserScrolled: true // Set to true once user has scrolled
     }));
     
     // Check if we've passed any thresholds
@@ -335,7 +436,7 @@ const ResumeView = () => {
         }));
         
         // Log the event and send to analytics
-        console.log(`Scroll threshold reached: ${threshold}%`);
+        // Removed console.log to reduce console output
         sendEngagementData('scroll_depth', { 
           threshold, 
           timestamp: Date.now(),
@@ -343,32 +444,28 @@ const ResumeView = () => {
         });
       }
     });
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, sendEngagementData]); // Removed resumeContainerRef and scrollDepthData.thresholds dependencies
   
-  // Track section visibility
+  // Track section visibility is now handled by IntersectionObserver in setupSectionObservers
+  // This function is kept as a comment for reference
+  /*
   const trackSectionVisibility = () => {
     if (!resumeContainerRef.current) return;
     
-    const container = resumeContainerRef.current;
-    const containerTop = container.scrollTop;
-    const containerBottom = containerTop + container.clientHeight;
-    const containerHeight = container.scrollHeight;
+    const viewportTop = window.scrollY || window.pageYOffset;
+    const viewportBottom = viewportTop + window.innerHeight;
     
     // Check each section's visibility
     Object.entries(sectionRefs.current).forEach(([sectionId, sectionRef]) => {
       if (!sectionRef) return;
       
       const sectionRect = sectionRef.getBoundingClientRect();
-      const containerRect = container.getBoundingClientRect();
       
-      // Calculate section position relative to the container
-      const sectionTop = sectionRect.top - containerRect.top + container.scrollTop;
-      const sectionBottom = sectionTop + sectionRect.height;
-      
-      // Check if section is visible
+      // Section is visible if it's in the viewport
       const isVisible = 
-        (sectionTop < containerBottom && sectionBottom > containerTop) &&
-        (sectionTop < containerHeight && sectionBottom > 0);
+        sectionRect.top < window.innerHeight &&
+        sectionRect.bottom > 0;
       
       // Update section visibility state
       setSectionVisibility(prev => {
@@ -376,7 +473,7 @@ const ResumeView = () => {
         if (prev[sectionId] !== isVisible) {
           const timestamp = Date.now();
           
-          // If section became visible, record entry time
+          // If section became visible and user has scrolled, record entry time
           if (isVisible) {
             setSectionEngagement(prev => ({
               ...prev,
@@ -387,12 +484,16 @@ const ResumeView = () => {
                 exitTime: null
               }
             }));
-            console.log(`Section entered: ${sectionId}`);
-            sendEngagementData('section_enter', {
-              section_id: sectionId,
-              timestamp: timestamp,
-              resume_id: id
-            });
+            
+            // Only log and send analytics if user has actually scrolled
+            if (scrollDepthData.hasUserScrolled) {
+              console.log(`Section entered: ${sectionId}`);
+              sendEngagementData('section_enter', {
+                section_id: sectionId,
+                timestamp: timestamp,
+                resume_id: id
+              });
+            }
           } 
           // If section is no longer visible and had an entry time, record exit time and duration
           else if (sectionEngagement[sectionId]?.entryTime) {
@@ -421,9 +522,11 @@ const ResumeView = () => {
       });
     });
   };
+  */
   
   // Track click interactions
-  const trackClickInteraction = (event) => {
+  // Wrapped in useCallback to prevent recreation on every render
+  const trackClickInteraction = React.useCallback((event) => {
     // Only track clicks on links
     if (event.target.tagName.toLowerCase() === 'a') {
       const link = event.target;
@@ -448,7 +551,7 @@ const ResumeView = () => {
       };
       
       setClickInteractions(prev => [...prev, clickData]);
-      console.log('Link clicked:', clickData);
+      // Removed console.log to reduce console output
       
       // Send to analytics backend
       sendEngagementData('link_click', {
@@ -456,22 +559,17 @@ const ResumeView = () => {
         resume_id: id
       });
     }
-  };
+  }, [id, sectionRefs, sendEngagementData]);
   
   // Effect to parse resume data when it changes
   useEffect(() => {
-    console.log('Resume state changed:', resume);
-    
     if (resume && resume.resume_json) {
-      console.log('Resume JSON available, type:', typeof resume.resume_json);
-      
       try {
         // Parse the JSON string to get the resume data
         let cv;
         
         // First check if resume_json is already an object
         if (typeof resume.resume_json === 'object' && resume.resume_json !== null) {
-          console.log('resume_json is already an object');
           cv = resume.resume_json;
         } else {
           try {
@@ -482,15 +580,16 @@ const ResumeView = () => {
               cv = JSON.parse(cv);
             }
           } catch (parseError) {
-            console.error('First parsing attempt failed:', parseError);
+            // Removed console.error to reduce console output
             // If double parsing fails, try single parsing
             cv = JSON.parse(resume.resume_json);
           }
         }
         
-        console.log('Parsed resume data:', cv);
+        // Removed console.log to reduce console output
         setParsedResume(cv);
       } catch (error) {
+        // Keep this console.error for debugging critical parsing errors
         console.error('Error parsing resume JSON:', error);
         setError(`Error parsing resume data: ${error.message}`);
       }
@@ -524,17 +623,16 @@ const ResumeView = () => {
     });
     
     setSectionEngagement(initialSectionEngagement);
-    setSectionVisibility(sectionIds.reduce((acc, id) => ({ ...acc, [id]: false }), {}));
+    // We're using IntersectionObserver instead of state for section visibility
+    // setSectionVisibility(sectionIds.reduce((acc, id) => ({ ...acc, [id]: false }), {}));
     
-    console.log('Section tracking initialized');
+    // Removed console.log to reduce console output
   }, [parsedResume]);
   
   // Set up event listeners for tracking
   useEffect(() => {
     // Skip if still loading or there's an error
     if (loading || error || !parsedResume || !resumeContainerRef.current) return;
-    
-    const container = resumeContainerRef.current;
     
     // Throttle function to limit how often the scroll handler fires
     const throttle = (callback, delay) => {
@@ -548,10 +646,10 @@ const ResumeView = () => {
       };
     };
     
-    // Throttled scroll handler
+    // Throttled scroll handler - only used for scroll depth tracking now
     const handleScroll = throttle(() => {
       trackScrollDepth();
-      trackSectionVisibility();
+      // Section visibility is now handled by IntersectionObserver
     }, 200); // 200ms throttle
     
     // Click handler
@@ -559,27 +657,35 @@ const ResumeView = () => {
       trackClickInteraction(e);
     };
     
-    // Add event listeners
-    container.addEventListener('scroll', handleScroll);
-    container.addEventListener('click', handleClick);
+    // Add event listeners to window
+    window.addEventListener('scroll', handleScroll);
+    document.addEventListener('click', handleClick);
     
-    // Initial tracking call
-    handleScroll();
+    // Set up IntersectionObserver for each section
+    // This will track sections visible on initial load without requiring scroll
+    setupSectionObservers();
     
-    // Clean up event listeners on unmount
+    // Store the current value of sessionStartTime for cleanup function
+    const currentSessionStartTime = sessionStartTime.current;
+    
+    // Clean up event listeners and observers on unmount
     return () => {
-      container.removeEventListener('scroll', handleScroll);
-      container.removeEventListener('click', handleClick);
+      window.removeEventListener('scroll', handleScroll);
+      document.removeEventListener('click', handleClick);
+      
+      // Disconnect all observers
+      Object.entries(observersRef.current).forEach(([key, value]) => {
+        // Only call disconnect on actual IntersectionObserver objects, not on visibility flags
+        if (value && typeof value === 'object' && typeof value.disconnect === 'function') {
+          value.disconnect();
+        }
+      });
       
       // On unmount, record final engagement metrics
       const sessionEndTime = Date.now();
-      const totalSessionDuration = sessionEndTime - sessionStartTime.current;
+      const totalSessionDuration = sessionEndTime - currentSessionStartTime;
       
-      // Log final engagement metrics
-      console.log('Session ended. Total duration:', totalSessionDuration, 'ms');
-      console.log('Max scroll depth:', scrollDepthData.maxScrollDepth, '%');
-      console.log('Section engagement:', sectionEngagement);
-      console.log('Click interactions:', clickInteractions);
+      // Removed console.logs to reduce console output
       
       // Send final engagement data to analytics backend
       sendEngagementData('session_end', { 
@@ -593,7 +699,30 @@ const ResumeView = () => {
         resume_id: id
       });
     };
-  }, [loading, error, parsedResume, scrollDepthData.thresholds, sectionEngagement]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, error, parsedResume, id, trackScrollDepth, trackClickInteraction, setupSectionObservers, sendEngagementData]);
+  // Removed unnecessary dependencies that were causing re-renders
+  // Original: [loading, error, parsedResume, scrollDepthData.thresholds, scrollDepthData.hasUserScrolled, sectionEngagement, trackScrollDepth, trackClickInteraction, setupSectionObservers, sendEngagementData, clickInteractions, id, scrollDepthData.maxScrollDepth]
+  
+  // Set up or update section observers when sectionRefs change
+  useEffect(() => {
+    if (!loading && !error && parsedResume && Object.keys(sectionRefs.current).length > 0) {
+      setupSectionObservers();
+    }
+    
+    return () => {
+      // Clean up observers when component unmounts or sectionRefs changes
+      Object.entries(observersRef.current).forEach(([key, value]) => {
+        // Only call disconnect on actual IntersectionObserver objects, not on visibility flags
+        if (value && typeof value === 'object' && typeof value.disconnect === 'function') {
+          value.disconnect();
+        }
+      });
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, error, parsedResume]); // Removed setupSectionObservers dependency
+  // Original: [loading, error, parsedResume, setupSectionObservers]
+  // sectionRefs.current is a mutable ref object, not a dependency
 
   if (loading) {
     return (
@@ -623,176 +752,215 @@ const ResumeView = () => {
   }
 
   return (
-    <Box sx={{ p: 3 }}>
-      {parsedResume && (
-        <Paper 
-          elevation={1}
-          ref={resumeContainerRef}
-          sx={{ 
-            maxWidth: '780px', 
-            margin: '0 auto',
-            padding: '2rem',
-            backgroundColor: '#fff',
-            // maxHeight: '80vh',
-            overflowY: 'auto'
-          }}
-        >
-          {/* Header */}
-          <Box 
-            id="header" 
-            ref={el => sectionRefs.current['header'] = el}
-          >
-            <Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
-              {parsedResume.basics.name}
-            </Typography>
-            
-            <Typography variant="body1" sx={{ fontStyle: 'italic', mb: 0.5 }}>
-              {parsedResume.basics.headline}
-            </Typography>
-            
-            <Typography variant="body1" sx={{ fontStyle: 'italic', mb: 2 }}>
-              {parsedResume.basics.address}<br />
-              {parsedResume.basics.phone} • <a href={`mailto:${parsedResume.basics.email}`}>{parsedResume.basics.email}</a>
-            </Typography>
-          </Box>
+		<Box ref={resumeContainerRef} sx={{ maxHeight: "100vh", p: 3 }}>
+			{parsedResume && (
+				<Paper
+					elevation={1}
+					sx={{
+						maxWidth: "780px",
+						margin: "0 auto",
+						padding: "2rem",
+						backgroundColor: "#fff",
+						// height: "100vh",
+						overflowY: "auto",
+					}}>
+					{/* Header */}
+					<Box id="header" ref={(el) => (sectionRefs.current["header"] = el)}>
+						<Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
+							{parsedResume.basics.name}
+						</Typography>
 
-          {/* Career Summary */}
-          <Box 
-            id="career-summary" 
-            ref={el => sectionRefs.current['career-summary'] = el}
-          >
-            <Typography variant="h5" sx={{ fontWeight: 700, mt: 3, mb: 1, borderBottom: '1px solid #ccc', pb: 0.5 }}>
-              Career Summary
-            </Typography>
-            <Typography variant="body1" paragraph>
-              {parsedResume.careerSummary}
-            </Typography>
-          </Box>
+						<Typography variant="body1" sx={{ fontStyle: "italic", mb: 0.5 }}>
+							{parsedResume.basics.headline}
+						</Typography>
 
-          {/* Skills */}
-          <Box 
-            id="skills" 
-            ref={el => sectionRefs.current['skills'] = el}
-          >
-            <Typography variant="h5" sx={{ fontWeight: 700, mt: 3, mb: 1, borderBottom: '1px solid #ccc', pb: 0.5 }}>
-              Key Skills
-            </Typography>
-            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5, mb: 2 }}>
-              {parsedResume.skills.map((skill, index) => (
-                <Box 
-                  key={index}
-                  sx={{ 
-                    backgroundColor: '#e7f1ff', 
-                    padding: '0.15rem 0.5rem', 
-                    borderRadius: '0.3rem',
-                    fontSize: '0.8rem'
-                  }}
-                >
-                  {skill}
-                </Box>
-              ))}
-            </Box>
-          </Box>
+						<Typography variant="body1" sx={{ fontStyle: "italic", mb: 2 }}>
+							{parsedResume.basics.address}
+							<br />
+							{parsedResume.basics.phone} •{" "}
+							<a href={`mailto:${parsedResume.basics.email}`}>
+								{parsedResume.basics.email}
+							</a>
+						</Typography>
+					</Box>
 
-          {/* Achievements */}
-          <Box 
-            id="achievements" 
-            ref={el => sectionRefs.current['achievements'] = el}
-          >
-            <Typography variant="h5" sx={{ fontWeight: 700, mt: 3, mb: 1, borderBottom: '1px solid #ccc', pb: 0.5 }}>
-              Achievements
-            </Typography>
-            <Box component="ul" sx={{ ml: 3, mb: 2 }}>
-              {parsedResume.achievements.map((achievement, index) => (
-                <Box component="li" key={index} sx={{ mb: 0.5 }}>
-                  <Typography variant="body1">{achievement}</Typography>
-                </Box>
-              ))}
-            </Box>
-          </Box>
+					{/* Career Summary */}
+					<Box
+						id="career-summary"
+						ref={(el) => (sectionRefs.current["career-summary"] = el)}>
+						<Typography
+							variant="h5"
+							sx={{
+								fontWeight: 700,
+								mt: 3,
+								mb: 1,
+								borderBottom: "1px solid #ccc",
+								pb: 0.5,
+							}}>
+							Career Summary
+						</Typography>
+						<Typography variant="body1" paragraph>
+							{parsedResume.careerSummary}
+						</Typography>
+					</Box>
 
-          {/* Employment History */}
-          <Box 
-            id="employment-history" 
-            ref={el => sectionRefs.current['employment-history'] = el}
-          >
-            <Typography variant="h5" sx={{ fontWeight: 700, mt: 3, mb: 1, borderBottom: '1px solid #ccc', pb: 0.5 }}>
-              Employment History
-            </Typography>
-            {parsedResume.employmentHistory.map((job, jobIndex) => (
-              <Box key={jobIndex} sx={{ mb: 2 }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  {job.title} – {job.company}
-                </Typography>
-                <Typography variant="body2" sx={{ fontStyle: 'italic', mb: 1 }}>
-                  {job.start} – {job.end} | {job.location}
-                </Typography>
-                <Box component="ul" sx={{ ml: 3 }}>
-                  {job.bullets.map((bullet, bulletIndex) => (
-                    <Box component="li" key={bulletIndex} sx={{ mb: 0.5 }}>
-                      <Typography variant="body1">{bullet}</Typography>
-                    </Box>
-                  ))}
-                </Box>
-              </Box>
-            ))}
-          </Box>
+					{/* Skills */}
+					<Box id="skills" ref={(el) => (sectionRefs.current["skills"] = el)}>
+						<Typography
+							variant="h5"
+							sx={{
+								fontWeight: 700,
+								mt: 3,
+								mb: 1,
+								borderBottom: "1px solid #ccc",
+								pb: 0.5,
+							}}>
+							Key Skills
+						</Typography>
+						<Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mb: 2 }}>
+							{parsedResume.skills.map((skill, index) => (
+								<Box
+									key={index}
+									sx={{
+										backgroundColor: "#e7f1ff",
+										padding: "0.15rem 0.5rem",
+										borderRadius: "0.3rem",
+										fontSize: "0.8rem",
+									}}>
+									{skill}
+								</Box>
+							))}
+						</Box>
+					</Box>
 
-          {/* Projects */}
-          <Box 
-            id="projects" 
-            ref={el => sectionRefs.current['projects'] = el}
-          >
-            <Typography variant="h5" sx={{ fontWeight: 700, mt: 3, mb: 1, borderBottom: '1px solid #ccc', pb: 0.5 }}>
-              Selected Projects
-            </Typography>
-            {parsedResume.projects.map((project, projectIndex) => (
-              <Box key={projectIndex} sx={{ mb: 2 }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  {project.name}
-                </Typography>
-                <Typography variant="body2" sx={{ fontStyle: 'italic', mb: 1 }}>
-                  {project.period} • {project.tech.join(', ')}
-                </Typography>
-                <Typography variant="body1" paragraph>
-                  {project.description}
-                </Typography>
-              </Box>
-            ))}
-          </Box>
+					{/* Achievements */}
+					<Box
+						id="achievements"
+						ref={(el) => (sectionRefs.current["achievements"] = el)}>
+						<Typography
+							variant="h5"
+							sx={{
+								fontWeight: 700,
+								mt: 3,
+								mb: 1,
+								borderBottom: "1px solid #ccc",
+								pb: 0.5,
+							}}>
+							Achievements
+						</Typography>
+						<Box component="ul" sx={{ ml: 3, mb: 2 }}>
+							{parsedResume.achievements.map((achievement, index) => (
+								<Box component="li" key={index} sx={{ mb: 0.5 }}>
+									<Typography variant="body1">{achievement}</Typography>
+								</Box>
+							))}
+						</Box>
+					</Box>
 
-          {/* Education */}
-          <Box 
-            id="education" 
-            ref={el => sectionRefs.current['education'] = el}
-          >
-            <Typography variant="h5" sx={{ fontWeight: 700, mt: 3, mb: 1, borderBottom: '1px solid #ccc', pb: 0.5 }}>
-              Education
-            </Typography>
-            {parsedResume.education.map((edu, eduIndex) => (
-              <Box key={eduIndex} sx={{ mb: 2 }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
-                  {edu.degree}, {edu.year}
-                </Typography>
-                <Typography variant="body2" sx={{ fontStyle: 'italic', mb: 1 }}>
-                  {edu.institution}, {edu.location}
-                </Typography>
-                {edu.highlights && (
-                  <Box component="ul" sx={{ ml: 3 }}>
-                    {edu.highlights.map((highlight, highlightIndex) => (
-                      <Box component="li" key={highlightIndex} sx={{ mb: 0.5 }}>
-                        <Typography variant="body1">{highlight}</Typography>
-                      </Box>
-                    ))}
-                  </Box>
-                )}
-              </Box>
-            ))}
-          </Box>
-        </Paper>
-      )}
-    </Box>
-  );
+					{/* Employment History */}
+					<Box
+						id="employment-history"
+						ref={(el) => (sectionRefs.current["employment-history"] = el)}>
+						<Typography
+							variant="h5"
+							sx={{
+								fontWeight: 700,
+								mt: 3,
+								mb: 1,
+								borderBottom: "1px solid #ccc",
+								pb: 0.5,
+							}}>
+							Employment History
+						</Typography>
+						{parsedResume.employmentHistory.map((job, jobIndex) => (
+							<Box key={jobIndex} sx={{ mb: 2 }}>
+								<Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+									{job.title} – {job.company}
+								</Typography>
+								<Typography variant="body2" sx={{ fontStyle: "italic", mb: 1 }}>
+									{job.start} – {job.end} | {job.location}
+								</Typography>
+								<Box component="ul" sx={{ ml: 3 }}>
+									{job.bullets.map((bullet, bulletIndex) => (
+										<Box component="li" key={bulletIndex} sx={{ mb: 0.5 }}>
+											<Typography variant="body1">{bullet}</Typography>
+										</Box>
+									))}
+								</Box>
+							</Box>
+						))}
+					</Box>
+
+					{/* Projects */}
+					<Box
+						id="projects"
+						ref={(el) => (sectionRefs.current["projects"] = el)}>
+						<Typography
+							variant="h5"
+							sx={{
+								fontWeight: 700,
+								mt: 3,
+								mb: 1,
+								borderBottom: "1px solid #ccc",
+								pb: 0.5,
+							}}>
+							Selected Projects
+						</Typography>
+						{parsedResume.projects.map((project, projectIndex) => (
+							<Box key={projectIndex} sx={{ mb: 2 }}>
+								<Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+									{project.name}
+								</Typography>
+								<Typography variant="body2" sx={{ fontStyle: "italic", mb: 1 }}>
+									{project.period} • {project.tech.join(", ")}
+								</Typography>
+								<Typography variant="body1" paragraph>
+									{project.description}
+								</Typography>
+							</Box>
+						))}
+					</Box>
+
+					{/* Education */}
+					<Box
+						id="education"
+						ref={(el) => (sectionRefs.current["education"] = el)}>
+						<Typography
+							variant="h5"
+							sx={{
+								fontWeight: 700,
+								mt: 3,
+								mb: 1,
+								borderBottom: "1px solid #ccc",
+								pb: 0.5,
+							}}>
+							Education
+						</Typography>
+						{parsedResume.education.map((edu, eduIndex) => (
+							<Box key={eduIndex} sx={{ mb: 2 }}>
+								<Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+									{edu.degree}, {edu.year}
+								</Typography>
+								<Typography variant="body2" sx={{ fontStyle: "italic", mb: 1 }}>
+									{edu.institution}, {edu.location}
+								</Typography>
+								{edu.highlights && (
+									<Box component="ul" sx={{ ml: 3 }}>
+										{edu.highlights.map((highlight, highlightIndex) => (
+											<Box component="li" key={highlightIndex} sx={{ mb: 0.5 }}>
+												<Typography variant="body1">{highlight}</Typography>
+											</Box>
+										))}
+									</Box>
+								)}
+							</Box>
+						))}
+					</Box>
+				</Paper>
+			)}
+		</Box>
+	);
 };
 
-export default ResumeView;
+// Export a memoized version of the component to prevent unnecessary re-renders
+export default React.memo(ResumeView);
