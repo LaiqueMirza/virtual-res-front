@@ -1,11 +1,25 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useParams } from 'react-router-dom'; // Removed useNavigate since it's not used
 import { Box, Typography, CircularProgress, Paper } from '@mui/material';
+import { useDispatch, useSelector } from 'react-redux';
+import { setResumeViewsId } from '../redux/reducers/resumeReducer';
+import axios from 'axios';
 
 // Resume view component that renders a resume using Material-UI components
 
 const ResumeView = () => {
-  const { id } = useParams(); // Removed navigate since it's not used
+  const { id: encodedId } = useParams(); // Get the base64 encoded ID from URL params
+  // Decode the base64 encoded ID
+  const resume_share_links_id = React.useMemo(() => {
+    try {
+      return atob(encodedId);
+    } catch (error) {
+      console.error('Error decoding ID:', error);
+      return encodedId; // Fallback to encoded ID if decoding fails
+    }
+  }, [encodedId]);
+  const dispatch = useDispatch();
+  const resumeViewsId = useSelector(state => state.resume.resumeViewsId);
   const [resume, setResume] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -15,18 +29,12 @@ const ResumeView = () => {
   const resumeContainerRef = useRef(null);
   const sectionRefs = useRef({});
   const observersRef = useRef({});
-  
-  // Engagement tracking states
-  const [scrollDepthData, setScrollDepthData] = useState({
-    thresholds: {
-      25: false,
-      50: false,
-      75: false,
-      100: false
-    },
-    maxScrollDepth: 0,
-    lastScrollTimestamp: null,
-    hasUserScrolled: false // Flag to track if user has actually scrolled
+  // Engagement tracking states - simplified to only track the four specific thresholds
+  const [thresholdsReached, setThresholdsReached] = useState({
+    25: false,
+    50: false,
+    75: false,
+    100: false
   });
   
   // We're using IntersectionObserver instead of state for section visibility
@@ -35,6 +43,24 @@ const ResumeView = () => {
   
   // Store section entry/exit timestamps
   const [sectionEngagement, setSectionEngagement] = useState({});
+  
+  // Initialize section engagement when parsedResume changes
+  useEffect(() => {
+    if (parsedResume) {
+      // Initialize section engagement with default values
+      const initialSectionEngagement = {};
+      // Add all standard sections
+      ['header', 'career-summary', 'skills', 'achievements', 'employment-history', 'projects', 'education'].forEach(section => {
+        initialSectionEngagement[section] = {
+          entryTime: null,
+          exitTime: null,
+          duration: 0
+        };
+      });
+      setSectionEngagement(initialSectionEngagement);
+      console.log('Initialized section engagement:', initialSectionEngagement);
+    }
+  }, [parsedResume]);
   
   // Tracking session start time
   const sessionStartTime = useRef(Date.now());
@@ -45,22 +71,23 @@ const ResumeView = () => {
   
     // This is a placeholder function that would send data to your analytics backend
     // For now, we'll just log it to the console
-    // Removed console.log to reduce console output
-    
+      console.log("event type", eventType," : ", eventData)
     // In a real implementation, you would send this data to your backend
     // Example:
+    // Use resumeViewsId from Redux
     // fetch(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/engagement`, {
     //   method: 'POST',
     //   headers: { 'Content-Type': 'application/json' },
     //   body: JSON.stringify({
-    //     resume_share_links_id: id,
+    //     resume_share_links_id: resume_share_links_id,
+    //     resume_views_id: currentResumeViewsId,
     //     event_type: eventType,
     //     event_data: eventData,
     //     timestamp: Date.now()
     //   })
     // });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]); // 'id' is needed for the commented code
+  }, [resume_share_links_id, dispatch]); // 'resume_share_links_id' is needed for the commented code
 
   // Function to set up IntersectionObserver for section visibility tracking
   // Wrapped in useCallback to prevent recreation on every render
@@ -76,6 +103,9 @@ const ResumeView = () => {
     // Reset observers ref
     observersRef.current = {};
     
+    // Store the current sectionEngagement in a ref to avoid dependency issues
+    const currentSectionEngagement = { ...sectionEngagement };
+    
     // Create new observers for each section
     Object.entries(sectionRefs.current).forEach(([sectionId, sectionRef]) => {
       if (!sectionRef) return;
@@ -90,6 +120,11 @@ const ResumeView = () => {
             // We'll use a local variable to track previous visibility state
             const prevVisibilityRef = observersRef.current[`${sectionId}_visible`] || false;
             
+            // Only log visibility changes when they actually occur
+            if (prevVisibilityRef !== isVisible) {
+              console.log(`Section ${sectionId} visibility changed: ${prevVisibilityRef} -> ${isVisible}`);
+            }
+            
             // If visibility changed, update engagement metrics
             if (prevVisibilityRef !== isVisible) {
               // Store current visibility state for future reference
@@ -97,50 +132,106 @@ const ResumeView = () => {
               
               // If section became visible, record entry time
               if (isVisible) {
-                setSectionEngagement(prev => ({
-                  ...prev,
-                  [sectionId]: {
-                    ...prev[sectionId],
-                    entryTime: timestamp,
-                    // Reset exit time when re-entering
-                    exitTime: null
-                  }
-                }));
+                // Get the current state to avoid stale closures
+                const updatedEngagement = {
+                  ...currentSectionEngagement[sectionId],
+                  entryTime: timestamp,
+                  exitTime: null
+                };
+                
+                // Update our local reference
+                currentSectionEngagement[sectionId] = updatedEngagement;
+                
+                // Update the state in a way that won't cause infinite loops
+                // We're batching this update to avoid multiple rerenders
+                setSectionEngagement(prev => {
+                  const newState = { ...prev };
+                  newState[sectionId] = updatedEngagement;
+                  return newState;
+                });
                 
                 // Log and send analytics for section entry
-                // No need to check if user has scrolled - we want to track initial visibility too
-                // Removed console.log to reduce console output
                 sendEngagementData('section_enter', {
                   section_id: sectionId,
                   timestamp: timestamp,
-                  resume_id: id
+                  resume_share_links_id: resume_share_links_id,
+                  resume_views_id: resumeViewsId
                 });
               } 
               // If section is no longer visible and had an entry time, record exit time and duration
-              else if (sectionEngagement[sectionId]?.entryTime) {
-                const entryTime = sectionEngagement[sectionId].entryTime;
-                const duration = timestamp - entryTime;
+              else if (!isVisible) {
+                // Get the current state from our local reference
+                const sectionData = currentSectionEngagement[sectionId];
                 
-                setSectionEngagement(prev => ({
-                  ...prev,
-                  [sectionId]: {
-                    ...prev[sectionId],
+                // Only process exit if we have an entry time and haven't already recorded an exit time
+                if (sectionData?.entryTime && sectionData?.exitTime === null) {
+                  console.log(`Section exit detected for ${sectionId}`);
+                  const entryTime = sectionData.entryTime;
+                  const duration = timestamp - entryTime;
+                  const durationInSeconds = Math.round(duration / 1000); // Convert milliseconds to seconds
+                  const viewEndTime = new Date(timestamp); // Create a Date object for the exit time
+                  console.log(`Section ${sectionId} was visible for ${durationInSeconds} seconds`);
+                  
+                  // Update our local reference
+                  const updatedEngagement = {
+                    ...sectionData,
                     exitTime: timestamp,
-                    duration: (prev[sectionId]?.duration || 0) + duration
+                    duration: (sectionData.duration || 0) + duration
+                  };
+                  
+                  currentSectionEngagement[sectionId] = updatedEngagement;
+                  
+                  // Update the state in a batched way
+                  setSectionEngagement(prev => {
+                    const newState = { ...prev };
+                    newState[sectionId] = updatedEngagement;
+                    return newState;
+                  });
+                  
+                  // Send analytics data
+                  sendEngagementData('section_exit', {
+                    section_id: sectionId,
+                    duration: duration,
+                    timestamp: timestamp,
+                    resume_share_links_id: resume_share_links_id,
+                    resume_views_id: resumeViewsId
+                  });
+                  
+                  console.log('Sending section_exit API call with data:', {
+                    resume_views_id: resumeViewsId,
+                    resume_share_links_id: resume_share_links_id,
+                    section_name: sectionId,
+                    total_time_spent: durationInSeconds,
+                    view_end_time: viewEndTime.toISOString()
+                  });
+                    
+                    // Make API call to track section exit event only if we have resumeViewsId
+                    if (resumeViewsId) {
+                      axios.post(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/track-event`, {
+                        resume_views_id: resumeViewsId,
+                        resume_share_links_id: resume_share_links_id,
+                        section_name: sectionId,
+                        total_time_spent: durationInSeconds,
+                        view_end_time: viewEndTime.toISOString()
+                      })
+                      .then(response => {
+                        console.log(`Successfully tracked exit for section: ${sectionId}`, response.data);
+                      })
+                      .catch(error => {
+                        console.error('Error tracking section exit event:', error);
+                      });
+                    } else {
+                      console.warn(`Cannot track section exit for ${sectionId}: resumeViewsId is not available yet`);
+                    }
                   }
-                }));
-                // Removed console.log to reduce console output
-                sendEngagementData('section_exit', {
-                  section_id: sectionId,
-                  duration: duration,
-                  timestamp: timestamp,
-                  resume_id: id
-                });
+                }
               }
-            }
           });
         },
-        { threshold: 0.1 } // Consider section visible when 10% is in viewport
+        { 
+          threshold: 0.1, // Trigger when at least 10% of the target is visible
+          rootMargin: '-10px' // Small negative margin to ensure the section is actually in view
+        } // Simplified threshold for more reliable detection
       );
       
       // Start observing the section
@@ -150,8 +241,7 @@ const ResumeView = () => {
       observersRef.current[sectionId] = observer;
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, sendEngagementData]); // Removed sectionEngagement dependency to prevent re-renders
-  // Original: [sectionEngagement, sendEngagementData, id]
+  }, [resume_share_links_id, sendEngagementData, resumeViewsId]); // Removed sectionEngagement from dependencies to prevent infinite rerenders
   
   // Function to get user's IP address using ipify API
   const getUserIP = async () => {
@@ -252,6 +342,7 @@ const ResumeView = () => {
         city: data.city || 'Unknown',
         country: data.country_name || 'Unknown'
       };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
     } catch (error) {
       console.error('Error fetching location:', error);
       // Try alternative location API if first one fails
@@ -272,8 +363,10 @@ const ResumeView = () => {
   };
 
   // Effect to fetch the resume data when the ID changes
+  // Note: This useEffect will run twice in development mode because of React.StrictMode
+  // This is expected behavior and helps catch bugs, but won't happen in production
   useEffect(() => {
-    if (!id) {
+    if (!resume_share_links_id) {
       setError('Invalid link. Please check the URL.');
       setLoading(false);
       return;
@@ -281,9 +374,11 @@ const ResumeView = () => {
 
     const fetchResume = async () => {
       try {
-        // console.log('Fetching resume with ID:', id);
+        // console.log('Fetching resume with ID:', resume_share_links_id);
         
         // Create a promise that will resolve with user information or reject after timeout
+        // This function is defined inside the useEffect to avoid recreating it on every render
+        // but could be moved outside and memoized with useCallback if needed elsewhere
         const getUserInfoWithTimeout = async (timeoutMs = 5000) => {
           return Promise.race([
             // The actual user info gathering
@@ -347,13 +442,18 @@ const ResumeView = () => {
         
         // Prepare the request payload
         const payload = {
-          resume_share_links_id: String(id), // Ensure ID is sent as a string
+          resume_share_links_id: String(resume_share_links_id), // Ensure ID is sent as a string
           viewer_ip: userInfo.userIP,
           device_type: userInfo.deviceType,
           browser_info: `${userInfo.browserName} (${userInfo.userAgent})`,
           location_city: userInfo.city,
           location_country: userInfo.country
         };
+        
+        // Include resumeViewsId in the payload if it's already available from Redux
+        if (resumeViewsId) {
+          payload.resume_views_id = resumeViewsId;
+        }
         
         // console.log('Sending API request with payload:', payload);
         
@@ -386,6 +486,12 @@ const ResumeView = () => {
         setResume(data);
         setLoading(false);
         
+        // Store resume_views_id in Redux for persistence
+        if (data && data.resume_views_id) {
+          dispatch(setResumeViewsId(data.resume_views_id));
+        }
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+        
         // We'll render the template in a useEffect that watches for resume changes
         if (!data || !data.resume_json) {
           console.error('Resume JSON data not available in the response');
@@ -397,11 +503,12 @@ const ResumeView = () => {
     };
 
     fetchResume();
-  }, [id]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [resume_share_links_id]); // Removed dispatch from dependencies to prevent double API calls
 
   // Utility functions for tracking user engagement
   
-  // Track scroll depth
+  // Track scroll depth - simplified to only track specific thresholds
   // Wrapped in useCallback to prevent recreation on every render
   const trackScrollDepth = React.useCallback(() => {
     if (!resumeContainerRef.current) return;
@@ -409,43 +516,50 @@ const ResumeView = () => {
     const container = document.documentElement || document.body;
     const containerHeight = container.scrollHeight - window.innerHeight;
     const scrollPosition = window.scrollY || window.pageYOffset;
-    // Removed console.log to reduce console output
     
-    // Prevent division by zero which causes NaN
-    const scrollPercentage = containerHeight > 0 ? Math.floor((scrollPosition / containerHeight) * 100) : 0;
+    // Calculate scroll percentage - use a small buffer (0.98) to ensure 100% is reached more easily
+    const scrollPercentage = containerHeight > 0 ? 
+      Math.min(Math.ceil((scrollPosition / (containerHeight * 0.98)) * 100), 100) : 0;
     
-    // Update max scroll depth and mark that user has scrolled
-    setScrollDepthData(prev => ({
-      ...prev,
-      maxScrollDepth: Math.max(prev.maxScrollDepth, scrollPercentage),
-      lastScrollTimestamp: Date.now(),
-      hasUserScrolled: true // Set to true once user has scrolled
-    }));
-    
-    // Check if we've passed any thresholds
+    // Check if we've passed any thresholds that haven't been reached yet
     const thresholds = [25, 50, 75, 100];
     thresholds.forEach(threshold => {
-      if (scrollPercentage >= threshold && !scrollDepthData.thresholds[threshold]) {
-        // Record that we've passed this threshold
-        setScrollDepthData(prev => ({
+      // Only trigger when crossing a threshold for the first time
+      if (scrollPercentage >= threshold && !thresholdsReached[threshold]) {
+        // Mark this threshold as reached
+        setThresholdsReached(prev => ({
           ...prev,
-          thresholds: {
-            ...prev.thresholds,
-            [threshold]: true
-          }
+          [threshold]: true
         }));
         
-        // Log the event and send to analytics
-        // Removed console.log to reduce console output
+        // Send to analytics backend
+        // Use resumeViewsId from Redux, 
+        
         sendEngagementData('scroll_depth', { 
           threshold, 
           timestamp: Date.now(),
-          resume_id: id
+          resume_share_links_id: resume_share_links_id,
+          resume_views_id: resumeViewsId,
+          scroll_percentage: threshold
+        });
+        
+        // Call the backend API for scroll depth tracking - only once per threshold
+        // Using the same resumeViewsId from above
+        
+        fetch(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/update-scroll`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            resume_views_id: resumeViewsId,
+            scroll_percentage: threshold
+          })
+        }).catch(error => {
+          console.error('Error updating scroll depth:', error);
         });
       }
     });
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, sendEngagementData]); // Removed resumeContainerRef and scrollDepthData.thresholds dependencies
+  }, [resume_share_links_id, sendEngagementData, thresholdsReached]); // Only depend on resume_share_links_id, sendEngagementData, and thresholdsReached
   
   // Track section visibility is now handled by IntersectionObserver in setupSectionObservers
   // This function is kept as a comment for reference
@@ -491,7 +605,7 @@ const ResumeView = () => {
               sendEngagementData('section_enter', {
                 section_id: sectionId,
                 timestamp: timestamp,
-                resume_id: id
+                resume_share_links_id: resume_share_links_id
               });
             }
           } 
@@ -513,7 +627,7 @@ const ResumeView = () => {
               section_id: sectionId,
               duration: duration,
               timestamp: timestamp,
-              resume_id: id
+              resume_share_links_id: resume_share_links_id
             });
           }
         }
@@ -554,12 +668,15 @@ const ResumeView = () => {
       // Removed console.log to reduce console output
       
       // Send to analytics backend
+      // Use resumeViewsId from Redux, 
+      
       sendEngagementData('link_click', {
         ...clickData,
-        resume_id: id
+        resume_share_links_id: resume_share_links_id,
+        resume_views_id: resumeViewsId
       });
     }
-  }, [id, sectionRefs, sendEngagementData]);
+  }, [resume_share_links_id, sectionRefs, sendEngagementData, resumeViewsId]);
   
   // Effect to parse resume data when it changes
   useEffect(() => {
@@ -688,30 +805,52 @@ const ResumeView = () => {
       // Removed console.logs to reduce console output
       
       // Send final engagement data to analytics backend
+      // Use resumeViewsId from Redux, 
+      
       sendEngagementData('session_end', { 
         duration: totalSessionDuration,
-        max_scroll_depth: scrollDepthData.maxScrollDepth,
         section_engagement: sectionEngagement,
         click_interactions: clickInteractions.length,
-        thresholds_reached: Object.entries(scrollDepthData.thresholds)
+        thresholds_reached: Object.entries(thresholdsReached)
           .filter(([_, reached]) => reached)
           .map(([threshold]) => parseInt(threshold)),
-        resume_id: id
+        resume_share_links_id: resume_share_links_id,
+        resume_views_id: resumeViewsId
       });
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, error, parsedResume, id, trackScrollDepth, trackClickInteraction, setupSectionObservers, sendEngagementData]);
+  }, [loading, error, parsedResume, resume_share_links_id, trackScrollDepth, trackClickInteraction, setupSectionObservers, sendEngagementData]);
   // Removed unnecessary dependencies that were causing re-renders
-  // Original: [loading, error, parsedResume, scrollDepthData.thresholds, scrollDepthData.hasUserScrolled, sectionEngagement, trackScrollDepth, trackClickInteraction, setupSectionObservers, sendEngagementData, clickInteractions, id, scrollDepthData.maxScrollDepth]
+  // Original: [loading, error, parsedResume, scrollDepthData.thresholds, scrollDepthData.hasUserScrolled, sectionEngagement, trackScrollDepth, trackClickInteraction, setupSectionObservers, sendEngagementData, clickInteractions, resume_share_links_id, scrollDepthData.maxScrollDepth]
   
   // Set up or update section observers when sectionRefs change
   useEffect(() => {
+    // Only set up observers when we have the necessary data and refs
     if (!loading && !error && parsedResume && Object.keys(sectionRefs.current).length > 0) {
-      setupSectionObservers();
+      // Small delay to ensure DOM is fully rendered
+      const timerId = setTimeout(() => {
+        // Call the function directly from the ref to avoid dependency issues
+        // This prevents the circular dependency that causes infinite rerenders
+        setupSectionObservers();
+        console.log('Section observers set up after delay');
+      }, 500);
+      
+      // Clean up the timer if the component unmounts before the timeout completes
+      return () => {
+        clearTimeout(timerId);
+        // Clean up observers
+        Object.entries(observersRef.current).forEach(([key, value]) => {
+          // Only call disconnect on actual IntersectionObserver objects, not on visibility flags
+          if (value && typeof value === 'object' && typeof value.disconnect === 'function') {
+            value.disconnect();
+          }
+        });
+      };
     }
     
+    // If we don't have the necessary data, just provide a cleanup function
     return () => {
-      // Clean up observers when component unmounts or sectionRefs changes
+      // Clean up observers when component unmounts or dependencies change
       Object.entries(observersRef.current).forEach(([key, value]) => {
         // Only call disconnect on actual IntersectionObserver objects, not on visibility flags
         if (value && typeof value === 'object' && typeof value.disconnect === 'function') {
@@ -720,9 +859,7 @@ const ResumeView = () => {
       });
     };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loading, error, parsedResume]); // Removed setupSectionObservers dependency
-  // Original: [loading, error, parsedResume, setupSectionObservers]
-  // sectionRefs.current is a mutable ref object, not a dependency
+  }, [loading, error, parsedResume]); // Keep minimal dependencies to prevent rerenders
 
   if (loading) {
     return (
@@ -732,7 +869,7 @@ const ResumeView = () => {
     );
   }
 
-  if (error || !id) {
+  if (error || !resume_share_links_id) {
     return (
       <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
         <Typography variant="h6" color="error">
