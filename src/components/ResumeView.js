@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { useParams } from 'react-router-dom'; // Removed useNavigate since it's not used
+import { useParams, useLocation } from 'react-router-dom'; // Added useLocation to detect route changes
 import { Box, Typography, CircularProgress, Paper } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { setResumeViewsId } from '../redux/reducers/resumeReducer';
@@ -63,7 +63,7 @@ const ResumeView = () => {
   }, [parsedResume]);
   
   // Tracking session start time
-  const sessionStartTime = useRef(Date.now());
+  const sessionStartTime = useRef(new Date());
 
   // Function to send engagement data to analytics backend
   // Wrapped in useCallback to prevent recreation on every render
@@ -447,7 +447,8 @@ const ResumeView = () => {
           device_type: userInfo.deviceType,
           browser_info: `${userInfo.browserName} (${userInfo.userAgent})`,
           location_city: userInfo.city,
-          location_country: userInfo.country
+          location_country: userInfo.country,
+          referrer_url: window.location.href
         };
         
         // Include resumeViewsId in the payload if it's already available from Redux
@@ -511,55 +512,64 @@ const ResumeView = () => {
   // Track scroll depth - simplified to only track specific thresholds
   // Wrapped in useCallback to prevent recreation on every render
   const trackScrollDepth = React.useCallback(() => {
-    if (!resumeContainerRef.current) return;
-    
-    const container = document.documentElement || document.body;
-    const containerHeight = container.scrollHeight - window.innerHeight;
-    const scrollPosition = window.scrollY || window.pageYOffset;
-    
-    // Calculate scroll percentage - use a small buffer (0.98) to ensure 100% is reached more easily
-    const scrollPercentage = containerHeight > 0 ? 
-      Math.min(Math.ceil((scrollPosition / (containerHeight * 0.98)) * 100), 100) : 0;
-    
-    // Check if we've passed any thresholds that haven't been reached yet
-    const thresholds = [25, 50, 75, 100];
-    thresholds.forEach(threshold => {
-      // Only trigger when crossing a threshold for the first time
-      if (scrollPercentage >= threshold && !thresholdsReached[threshold]) {
-        // Mark this threshold as reached
-        setThresholdsReached(prev => ({
-          ...prev,
-          [threshold]: true
-        }));
-        
-        // Send to analytics backend
-        // Use resumeViewsId from Redux, 
-        
-        sendEngagementData('scroll_depth', { 
-          threshold, 
-          timestamp: Date.now(),
-          resume_share_links_id: resume_share_links_id,
-          resume_views_id: resumeViewsId,
-          scroll_percentage: threshold
-        });
-        
-        // Call the backend API for scroll depth tracking - only once per threshold
-        // Using the same resumeViewsId from above
-        
-        fetch(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/update-scroll`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            resume_views_id: resumeViewsId,
-            scroll_percentage: threshold
-          })
-        }).catch(error => {
-          console.error('Error updating scroll depth:', error);
-        });
-      }
-    });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [resume_share_links_id, sendEngagementData, thresholdsReached]); // Only depend on resume_share_links_id, sendEngagementData, and thresholdsReached
+		if (!resumeContainerRef.current) return;
+
+		const container = document.documentElement || document.body;
+		const containerHeight = container.scrollHeight - window.innerHeight;
+		const scrollPosition = window.scrollY || window.pageYOffset;
+
+		// Calculate scroll percentage - use a small buffer (0.98) to ensure 100% is reached more easily
+		const scrollPercentage =
+			containerHeight > 0
+				? Math.min(
+						Math.ceil((scrollPosition / (containerHeight * 0.97)) * 100),
+						100
+				  )
+				: 0;
+
+		// Check if we've passed any thresholds that haven't been reached yet
+		const thresholds = [25, 50, 75, 100];
+		thresholds.forEach((threshold) => {
+			// Only trigger when crossing a threshold for the first time
+			if (scrollPercentage >= threshold && !thresholdsReached[threshold]) {
+				// Mark this threshold as reached
+				setThresholdsReached((prev) => ({
+					...prev,
+					[threshold]: true,
+				}));
+
+				// Send to analytics backend
+				// Use resumeViewsId from Redux,
+
+				sendEngagementData("scroll_depth", {
+					threshold,
+					timestamp: Date.now(),
+					resume_share_links_id: resume_share_links_id,
+					resume_views_id: resumeViewsId,
+					scroll_percentage: threshold,
+				});
+
+				// Call the backend API for scroll depth tracking - only once per threshold
+				// Using the same resumeViewsId from above
+
+				fetch(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/update-scroll`, {
+					method: "POST",
+					headers: { "Content-Type": "application/json" },
+					body: JSON.stringify({
+						resume_views_id: resumeViewsId,
+						scroll_percentage: threshold,
+					}),
+				}).catch((error) => {
+					console.error("Error updating scroll depth:", error);
+				});
+			}
+		});
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [
+		resumeViewsId, resume_share_links_id,
+		sendEngagementData,
+		thresholdsReached,
+	]); // Only depend on resume_share_links_id, sendEngagementData, and thresholdsReached
   
   // Track section visibility is now handled by IntersectionObserver in setupSectionObservers
   // This function is kept as a comment for reference
@@ -638,43 +648,74 @@ const ResumeView = () => {
   };
   */
   
-  // Track click interactions
+  // Track click interactions on all elements in the resume
   // Wrapped in useCallback to prevent recreation on every render
   const trackClickInteraction = React.useCallback((event) => {
-    // Only track clicks on links
-    if (event.target.tagName.toLowerCase() === 'a') {
-      const link = event.target;
-      const url = link.href;
-      const isExternal = link.hostname !== window.location.hostname;
-      const timestamp = Date.now();
-      
-      // Find which section contains this link
-      let sectionId = 'unknown';
-      Object.entries(sectionRefs.current).forEach(([id, ref]) => {
-        if (ref && ref.contains(link)) {
-          sectionId = id;
+    debugger;
+    // Get the clicked element
+    const clickedElement = event.target;
+    const timestamp = Date.now();
+    
+    // Find which section contains this element
+    let sectionId = 'unknown';
+    Object.entries(sectionRefs.current).forEach(([id, ref]) => {
+      if (ref && ref.contains(clickedElement)) {
+        sectionId = id;
+      }
+    });
+    
+    // Get link information if the clicked element is a link or has a parent link
+    let link = null;
+    let elementText = clickedElement.textContent?.trim() || '';
+    
+    // Check if the clicked element is a link or has a parent link
+    if (clickedElement.tagName.toLowerCase() === 'a') {
+      link = clickedElement.href;
+    } else {
+      // Check if any parent element is a link (up to 3 levels up)
+      let parentElement = clickedElement.parentElement;
+      let level = 0;
+      while (parentElement && level < 3) {
+        if (parentElement.tagName.toLowerCase() === 'a') {
+          link = parentElement.href;
+          if (!elementText) {
+            elementText = parentElement.textContent?.trim() || '';
+          }
+          break;
         }
-      });
-      
-      // Record the click interaction
-      const clickData = {
-        url,
-        isExternal,
-        timestamp,
-        sectionId
-      };
-      
-      setClickInteractions(prev => [...prev, clickData]);
-      // Removed console.log to reduce console output
-      
-      // Send to analytics backend
-      // Use resumeViewsId from Redux, 
-      
-      sendEngagementData('link_click', {
-        ...clickData,
-        resume_share_links_id: resume_share_links_id,
-        resume_views_id: resumeViewsId
-      });
+        parentElement = parentElement.parentElement;
+        level++;
+      }
+    }
+    
+    // Record the click interaction
+    const clickData = {
+      timestamp,
+      sectionId,
+      element_text: elementText,
+      link: link
+    };
+    
+    setClickInteractions(prev => [...prev, clickData]);
+    
+    // Send to analytics backend
+    sendEngagementData('click', {
+      ...clickData,
+      resume_share_links_id: resume_share_links_id,
+      resume_views_id: resumeViewsId
+    });
+    
+    // Call the backend API to track click events
+    if (resumeViewsId) {
+        axios.post(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/track-click`, {
+          resume_views_id: resumeViewsId,
+          resume_share_links_id: resume_share_links_id,
+          section_name: sectionId,
+          link: link,
+          element_text: elementText
+        }).catch(error => {
+          console.error('Error tracking click event:', error);
+        });
     }
   }, [resume_share_links_id, sectionRefs, sendEngagementData, resumeViewsId]);
   
@@ -746,6 +787,137 @@ const ResumeView = () => {
     // Removed console.log to reduce console output
   }, [parsedResume]);
   
+  // Function to track section exits and send data to the backend
+  const trackSectionExits = React.useCallback(() => {
+    if (!resumeViewsId) return;
+    
+    const exitTime = new Date();
+    
+    // Process all sections that have entry times but no exit times
+    Object.entries(sectionEngagement).forEach(([sectionId, sectionData]) => {
+      // Only process sections that have been entered but not exited
+      if (sectionData.entryTime && !sectionData.exitTime) {
+        const entryTime = sectionData.entryTime;
+        const duration = Date.now() - entryTime;
+        const durationInSeconds = Math.round(duration / 1000); // Convert to seconds
+        
+        console.log(`Tracking exit for section ${sectionId} on page unload/unmount`);
+        console.log(`Section ${sectionId} was visible for ${durationInSeconds} seconds`);
+        
+        // Make API call to track section exit event
+        if (resumeViewsId) {
+          // Use sendBeacon for more reliable data sending during page unload
+          if (navigator.sendBeacon) {
+            const data = JSON.stringify({
+              resume_views_id: resumeViewsId,
+              resume_share_links_id: resume_share_links_id,
+              section_name: sectionId,
+              total_time_spent: durationInSeconds,
+              view_end_time: exitTime.toISOString()
+            });
+            
+            navigator.sendBeacon(
+              `${process.env.REACT_APP_API_BASE_URL}/v1/resume/track-event`,
+              new Blob([data], { type: 'application/json' })
+            );
+          } else {
+            // Fallback to axios if sendBeacon is not available
+            axios.post(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/track-event`, {
+              resume_views_id: resumeViewsId,
+              resume_share_links_id: resume_share_links_id,
+              section_name: sectionId,
+              total_time_spent: durationInSeconds,
+              view_end_time: exitTime.toISOString()
+            }).catch(error => {
+              console.error(`Error tracking exit for section ${sectionId}:`, error);
+            });
+          }
+        }
+      }
+    });
+  }, [resumeViewsId, resume_share_links_id, sectionEngagement]);
+  
+  // Function to send view time data to the backend
+  const sendViewTimeData = React.useCallback(() => {
+    if (!resumeViewsId) return;
+    const sessionEndTime = new Date();
+    const totalSessionDuration = Math.round((sessionEndTime - sessionStartTime.current) / 1000); // Convert to seconds
+    
+    // Only log if we're actually sending data
+    console.log('Sending view time data:', {
+      resume_views_id: resumeViewsId,
+      total_time_spent: totalSessionDuration,
+      view_end_time: sessionEndTime.toISOString()
+    });
+    
+    // Use navigator.sendBeacon for more reliable data sending during page unload
+    // This is more reliable than fetch or axios during page unload events
+    if (navigator.sendBeacon) {
+      const data = JSON.stringify({
+        resume_views_id: resumeViewsId,
+        total_time_spent: totalSessionDuration,
+        view_end_time: sessionEndTime.toISOString()
+      });
+      
+      navigator.sendBeacon(
+        `${process.env.REACT_APP_API_BASE_URL}/v1/resume/update-view-time`,
+        new Blob([data], { type: 'application/json' })
+      );
+    } else {
+      // Fallback to axios if sendBeacon is not available
+      axios.post(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/update-view-time`, {
+        resume_views_id: resumeViewsId,
+        total_time_spent: totalSessionDuration,
+        view_end_time: sessionEndTime.toISOString()
+      }).catch(error => {
+        console.error('Error sending view time data:', error);
+      });
+    }
+  }, [resumeViewsId, sessionStartTime]);
+  
+  // Use location to detect route changes
+  const location = useLocation();
+  
+  // currently of no use but still for protect need further R & D
+  useEffect(() => {
+    // Store the current location path to detect actual navigation changes
+    const currentPath = location.pathname;
+    
+    return () => {
+      const newPath = window.location.pathname;
+      if (newPath !== currentPath) {
+        // Track section exits and send view time data when navigating away
+        trackSectionExits();
+        sendViewTimeData();
+      }
+    };
+  }, [location, trackSectionExits, sendViewTimeData]);
+  
+  // Set up beforeunload event listener to track page exit
+  useEffect(() => {
+    if (!resumeViewsId) return;
+    
+    const handleBeforeUnload = (event) => {
+			// Track section exits first
+			trackSectionExits();
+			// Then send overall view time data
+			sendViewTimeData();
+		};
+		window.addEventListener("beforeunload", handleBeforeUnload);
+		return () => {
+			window.removeEventListener("beforeunload", handleBeforeUnload);
+		// 	// Only track section exits and send view time data when the component is truly unmounting
+		// 	// or when the user is navigating away, but not during internal re-renders
+		// 	// We also check if beforeunload was triggered to avoid duplicate calls
+		// 	if ((isUnmountingRef.current || isNavigatingAwayRef.current) && !beforeunloadTriggered) {
+		// 		// Track section exits first
+		// 		trackSectionExits();
+		// 		// Then send overall view time data
+		// 		sendViewTimeData();
+		// 	}
+		};
+	}, [resumeViewsId, sendViewTimeData, trackSectionExits]);
+  
   // Set up event listeners for tracking
   useEffect(() => {
     // Skip if still loading or there's an error
@@ -776,7 +948,7 @@ const ResumeView = () => {
     
     // Add event listeners to window
     window.addEventListener('scroll', handleScroll);
-    document.addEventListener('click', handleClick);
+    window.addEventListener('click', handleClick);
     
     // Set up IntersectionObserver for each section
     // This will track sections visible on initial load without requiring scroll
@@ -788,7 +960,7 @@ const ResumeView = () => {
     // Clean up event listeners and observers on unmount
     return () => {
       window.removeEventListener('scroll', handleScroll);
-      document.removeEventListener('click', handleClick);
+      window.removeEventListener("click", handleClick);
       
       // Disconnect all observers
       Object.entries(observersRef.current).forEach(([key, value]) => {
