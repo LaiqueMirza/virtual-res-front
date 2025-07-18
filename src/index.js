@@ -7,6 +7,9 @@ import { Provider } from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './redux/store';
 
+// Import axios configuration
+import './utils/axiosConfig';
+
 const root = ReactDOM.createRoot(document.getElementById('root'));
 // React.StrictMode intentionally renders components twice in development mode to help
 // find bugs like impure rendering, side effects in render, and so on.

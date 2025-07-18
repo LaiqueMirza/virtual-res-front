@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
+import axios from '../utils/axiosConfig';
 
 const GenerateLinkPopup = ({ open, onClose, resumeId, resumeName }) => {
   const [clientName, setClientName] = useState('');
@@ -49,30 +50,21 @@ const GenerateLinkPopup = ({ open, onClose, resumeId, resumeName }) => {
     setSubmitError('');
 
     try {
-      const response = await fetch(
-				`${process.env.REACT_APP_API_BASE_URL}/v1/resume/share/link`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						client_name: clientName,
-						resumes_uploaded_id: resumeId,
-					}),
-				}
-			);
+      const response = await axios.post('/v1/resume/share/link', {
+        client_name: clientName,
+        resumes_uploaded_id: resumeId,
+      });
 
-      const {data} = await response.json();
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to generate link');
+      const { data } = response.data;
+      if (!data) {
+        throw new Error('Failed to generate link');
       }
 
       const shareLink = `${process.env.REACT_APP_FRONTEND_URL}/view/${data.share_link_id}`;
       setGeneratedLink(shareLink);
     } catch (error) {
       console.error('Error generating link:', error);
-      setSubmitError(error.message);
+      setSubmitError(error.response?.data?.message || error.message || 'Failed to generate link');
     } finally {
       setIsSubmitting(false);
     }

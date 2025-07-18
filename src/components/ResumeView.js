@@ -3,7 +3,7 @@ import { useParams, useLocation } from 'react-router-dom'; // Added useLocation 
 import { Box, Typography, CircularProgress, Paper } from '@mui/material';
 import { useDispatch, useSelector } from 'react-redux';
 import { setResumeViewsId } from '../redux/reducers/resumeReducer';
-import axios from 'axios';
+import axios from '../utils/axiosConfig';
 
 // Resume view component that renders a resume using Material-UI components
 
@@ -207,7 +207,7 @@ const ResumeView = () => {
                     
                     // Make API call to track section exit event only if we have resumeViewsId
                     if (resumeViewsId) {
-                      axios.post(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/track-event`, {
+                      axios.post('/v1/resume/track-event', {
                         resume_views_id: resumeViewsId,
                         resume_share_links_id: resume_share_links_id,
                         section_name: sectionId,
@@ -458,29 +458,13 @@ const ResumeView = () => {
         
         // console.log('Sending API request with payload:', payload);
         
-        // Set a timeout for the API call
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 10000); // 10 second timeout
-        
         // Make the API call with whatever info we have
-        const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/preview`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(payload),
-          signal: controller.signal
+        const response = await axios.post('/v1/resume/preview', payload, {
+          timeout: 10000 // 10 second timeout
         });
-        
-        clearTimeout(timeoutId);
         // console.log('API response status:', response.status);
 
-        if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.message || 'Resume not found');
-        }
-
-        const responseData = await response.json();
+        const responseData = response.data;
         // console.log('API response data:', responseData);
         
         const {data} = responseData;
@@ -552,13 +536,9 @@ const ResumeView = () => {
 				// Call the backend API for scroll depth tracking - only once per threshold
 				// Using the same resumeViewsId from above
 
-				fetch(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/update-scroll`, {
-					method: "POST",
-					headers: { "Content-Type": "application/json" },
-					body: JSON.stringify({
-						resume_views_id: resumeViewsId,
-						scroll_percentage: threshold,
-					}),
+				axios.post('/v1/resume/update-scroll', {
+					resume_views_id: resumeViewsId,
+					scroll_percentage: threshold,
 				}).catch((error) => {
 					console.error("Error updating scroll depth:", error);
 				});
@@ -707,7 +687,7 @@ const ResumeView = () => {
     
     // Call the backend API to track click events
     if (resumeViewsId) {
-        axios.post(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/track-click`, {
+        axios.post('/v1/resume/track-click', {
           resume_views_id: resumeViewsId,
           resume_share_links_id: resume_share_links_id,
           section_name: sectionId,
@@ -822,7 +802,7 @@ const ResumeView = () => {
             );
           } else {
             // Fallback to axios if sendBeacon is not available
-            axios.post(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/track-event`, {
+            axios.post('/v1/resume/track-event', {
               resume_views_id: resumeViewsId,
               resume_share_links_id: resume_share_links_id,
               section_name: sectionId,
@@ -865,7 +845,7 @@ const ResumeView = () => {
       );
     } else {
       // Fallback to axios if sendBeacon is not available
-      axios.post(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/update-view-time`, {
+      axios.post('/v1/resume/update-view-time', {
         resume_views_id: resumeViewsId,
         total_time_spent: totalSessionDuration,
         view_end_time: sessionEndTime.toISOString()

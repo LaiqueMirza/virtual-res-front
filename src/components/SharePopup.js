@@ -12,6 +12,7 @@ import {
   CircularProgress
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import axios from '../utils/axiosConfig';
 
 const SharePopup = ({ open, onClose, resumeId, resumeName }) => {
   const [emails, setEmails] = useState('');
@@ -61,25 +62,10 @@ const SharePopup = ({ open, onClose, resumeId, resumeName }) => {
     try {
       const emailList = emails.split(',').map(email => email.trim());
 
-      const response = await fetch(
-				`${process.env.REACT_APP_API_BASE_URL}/v1/resume/share/email`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						emails: emailList,
-						resumes_uploaded_id: resumeId,
-					}),
-				}
-			);
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.message || 'Failed to share resume');
-      }
+      const response = await axios.post('/v1/resume/share/email', {
+        emails: emailList,
+        resumes_uploaded_id: resumeId,
+      });
 
       setSubmitSuccess(true);
       setEmails('');
@@ -91,7 +77,7 @@ const SharePopup = ({ open, onClose, resumeId, resumeName }) => {
       }, 2000);
     } catch (error) {
       console.error('Error sharing resume:', error);
-      setSubmitError(error.message);
+      setSubmitError(error.response?.data?.message || error.message || 'Failed to share resume');
     } finally {
       setIsSubmitting(false);
     }

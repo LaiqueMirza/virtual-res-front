@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Box, Pagination, Typography, CircularProgress } from '@mui/material';
 import ResumeCard from './ResumeCard';
+import axios from '../utils/axiosConfig';
 
 const ResumeList = () => {
   const [resumes, setResumes] = useState([]);
@@ -13,30 +14,20 @@ const ResumeList = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/resume_lists`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          page: pageNum,
-          limit: 10
-        })
+      const response = await axios.post('/v1/resume/resume_lists', {
+        page: pageNum,
+        limit: 10
       });
-      if (!response.ok) {
-        throw new Error(`Failed to fetch resumes: ${response.status}`);
-      }
-      const data = await response.json();
       
-      if (data.success) {
-        setResumes(data.data.resumes);
-        setTotalPages(data.data.pagination.totalPages);
+      if (response.data.success) {
+        setResumes(response.data.data.resumes);
+        setTotalPages(response.data.data.pagination.totalPages);
       } else {
         throw new Error('Failed to fetch resumes');
       }
     } catch (err) {
       console.error('Error fetching resumes:', err);
-      setError(err.message);
+      setError(err.response?.data?.message || err.message || 'Failed to fetch resumes');
       setResumes([]);
     } finally {
       setLoading(false);

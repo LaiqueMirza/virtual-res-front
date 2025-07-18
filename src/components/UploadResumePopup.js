@@ -14,6 +14,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import AddIcon from '@mui/icons-material/Add';
+import axios from '../utils/axiosConfig';
 
 const UploadResumePopup = ({ open, onClose }) => {
   const [file, setFile] = useState(null);
@@ -83,14 +84,11 @@ const UploadResumePopup = ({ open, onClose }) => {
       formData.append('file', file);
       formData.append('resumeName', resumeName);
 
-      const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/upload`, {
-        method: 'POST',
-        body: formData,
+      const response = await axios.post('/v1/resume/upload', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
       });
-
-      if (!response.ok) {
-        throw new Error(`Upload failed with status: ${response.status}`);
-      }
 
       setUploadSuccess(true);
       setFile(null);
@@ -107,7 +105,7 @@ const UploadResumePopup = ({ open, onClose }) => {
       }, 2000);
     } catch (error) {
       console.error('Upload error:', error);
-      setFileError(`Upload failed: ${error.message}`);
+      setFileError(`Upload failed: ${error.response?.data?.message || error.message || 'Unknown error'}`);
     } finally {
       setUploading(false);
     }

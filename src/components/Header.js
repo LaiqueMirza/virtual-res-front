@@ -3,6 +3,7 @@ import { Box, Typography, TextField, Button, InputAdornment } from '@mui/materia
 import SearchIcon from '@mui/icons-material/Search';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import UploadResumePopup from './UploadResumePopup';
+import LogoutButton from './LogoutButton';
 
 const Header = () => {
   const [uploadPopupOpen, setUploadPopupOpen] = useState(false);
@@ -21,7 +22,7 @@ const Header = () => {
         Resumes analytics
       </Typography>
       
-      <Box sx={{ display: 'flex', gap: 2 }}>
+      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
         <TextField
           size="small"
           placeholder="search"
@@ -44,6 +45,9 @@ const Header = () => {
         >
           Upload New Resume
         </Button>
+        
+        {/* Logout Button */}
+        <LogoutButton />
 
         {/* Upload Resume Popup */}
         <UploadResumePopup 
