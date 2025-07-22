@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   Box,
@@ -22,15 +22,22 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [formErrors, setFormErrors] = useState({});
   const { login, isAuthenticated, isLoading, error } = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  
+  // Get the intended destination from location state, default to "/"
+  const from = location.state?.from?.pathname || '/';
   
   const handleTogglePasswordVisibility = () => {
     setShowPassword(!showPassword);
   };
 
-  // If already authenticated, redirect to dashboard
-  if (isAuthenticated) {
-    return <Navigate to="/" replace />;
-  }
+  // Redirect to intended destination after successful authentication
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, navigate, from]);
 
   const validateForm = () => {
     const errors = {};
@@ -60,6 +67,11 @@ const Login = () => {
       await login(email, password);
     }
   };
+
+  // If already authenticated, redirect immediately (for direct access to login page)
+  if (isAuthenticated) {
+    return <Navigate to={from} replace />;
+  }
 
   return (
     <Container component="main" maxWidth="xs">
