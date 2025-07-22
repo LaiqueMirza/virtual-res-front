@@ -506,7 +506,7 @@ const ResumeView = () => {
 		const scrollPercentage =
 			containerHeight > 0
 				? Math.min(
-						Math.ceil((scrollPosition / (containerHeight * 0.97)) * 100),
+						Math.ceil((scrollPosition / (containerHeight * 0.94)) * 100),
 						100
 				  )
 				: 0;
@@ -631,7 +631,6 @@ const ResumeView = () => {
   // Track click interactions on all elements in the resume
   // Wrapped in useCallback to prevent recreation on every render
   const trackClickInteraction = React.useCallback((event) => {
-    debugger;
     // Get the clicked element
     const clickedElement = event.target;
     const timestamp = Date.now();
@@ -819,40 +818,67 @@ const ResumeView = () => {
   
   // Function to send view time data to the backend
   const sendViewTimeData = React.useCallback(() => {
-    if (!resumeViewsId) return;
+    debugger;
+    if (!resumeViewsId) {
+      console.log('Cannot send view time data: resumeViewsId is not available');
+      return;
+    }
+    
     const sessionEndTime = new Date();
     const totalSessionDuration = Math.round((sessionEndTime - sessionStartTime.current) / 1000); // Convert to seconds
     
-    // Only log if we're actually sending data
-    console.log('Sending view time data:', {
+    const payload = {
       resume_views_id: resumeViewsId,
       total_time_spent: totalSessionDuration,
       view_end_time: sessionEndTime.toISOString()
-    });
+    };
     
-    // Use navigator.sendBeacon for more reliable data sending during page unload
-    // This is more reliable than fetch or axios during page unload events
-    if (navigator.sendBeacon) {
-      const data = JSON.stringify({
-        resume_views_id: resumeViewsId,
-        total_time_spent: totalSessionDuration,
-        view_end_time: sessionEndTime.toISOString()
-      });
-      
-      navigator.sendBeacon(
-        `${process.env.REACT_APP_API_BASE_URL}/v1/resume/update-view-time`,
-        new Blob([data], { type: 'application/json' })
-      );
-    } else {
-      // Fallback to axios if sendBeacon is not available
-      axios.post('/v1/resume/update-view-time', {
-        resume_views_id: resumeViewsId,
-        total_time_spent: totalSessionDuration,
-        view_end_time: sessionEndTime.toISOString()
-      }).catch(error => {
-        console.error('Error sending view time data:', error);
-      });
+    // Only log if we're actually sending data
+    console.log('Sending view time data:', payload);
+    
+    // Try sendBeacon first for page unload scenarios, but with proper fallback
+    if (navigator.sendBeacon && process.env.REACT_APP_API_BASE_URL) {
+      try {
+        // Create FormData instead of JSON for better compatibility with sendBeacon
+        const formData = new FormData();
+        formData.append('resume_views_id', resumeViewsId);
+        formData.append('total_time_spent', totalSessionDuration);
+        formData.append('view_end_time', sessionEndTime.toISOString());
+        
+        const success = navigator.sendBeacon(
+          `${process.env.REACT_APP_API_BASE_URL}/v1/resume/update-view-time`,
+          formData
+        );
+        
+        if (success) {
+          console.log('View time data sent successfully via sendBeacon');
+          return;
+        } else {
+          console.warn('sendBeacon failed, falling back to axios');
+        }
+      } catch (error) {
+        console.error('Error with sendBeacon:', error);
+      }
     }
+    
+    // Fallback to axios (more reliable for debugging)
+    axios.post('/v1/resume/update-view-time', payload)
+      .then(response => {
+        console.log('View time data sent successfully via axios:', response.data);
+      })
+      .catch(error => {
+        console.error('Error sending view time data via axios:', error);
+        
+        // Additional debugging information
+        if (error.response) {
+          console.error('Response status:', error.response.status);
+          console.error('Response data:', error.response.data);
+        } else if (error.request) {
+          console.error('No response received:', error.request);
+        } else {
+          console.error('Request setup error:', error.message);
+        }
+      });
   }, [resumeViewsId, sessionStartTime]);
   
   // Use location to detect route changes

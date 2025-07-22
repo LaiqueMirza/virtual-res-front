@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardActions, Typography, Button, Avatar, Box } from '@mui/material';
 import VisibilityIcon from '@mui/icons-material/Visibility';
 import ShareIcon from '@mui/icons-material/Share';
@@ -8,6 +9,7 @@ import SharePopup from './SharePopup';
 import GenerateLinkPopup from './GenerateLinkPopup';
 
 const ResumeCard = ({ resumeName, uploadedBy, date, id }) => {
+  const navigate = useNavigate();
   const [sharePopupOpen, setSharePopupOpen] = useState(false);
   const [generateLinkPopupOpen, setGenerateLinkPopupOpen] = useState(false);
 
@@ -25,6 +27,10 @@ const ResumeCard = ({ resumeName, uploadedBy, date, id }) => {
 
   const handleCloseGenerateLinkPopup = () => {
     setGenerateLinkPopupOpen(false);
+  };
+
+  const handleAnalyticsClick = () => {
+    navigate(`/resume-analytics/${id}`);
   };
 
   return (
@@ -74,7 +80,11 @@ const ResumeCard = ({ resumeName, uploadedBy, date, id }) => {
 					resumeId={id}
 					resumeName={resumeName}
 				/>
-				<Button size="small" startIcon={<AnalyticsIcon />}>
+				<Button 
+					size="small" 
+					startIcon={<AnalyticsIcon />}
+					onClick={handleAnalyticsClick}
+				>
 					Analytics
 				</Button>
 			</CardActions>
