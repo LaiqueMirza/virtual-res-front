@@ -44,6 +44,28 @@ const ResumeList = () => {
     return date.toLocaleString();
   };
 
+  // Function to format time spent
+  const formatTimeSpent = (timeString) => {
+    if (!timeString) return '0s';
+    try {
+      // Convert "00:05:30" format to readable format
+      const parts = timeString.split(':');
+      const hours = parseInt(parts[0]) || 0;
+      const minutes = parseInt(parts[1]) || 0;
+      const seconds = parseInt(parts[2]) || 0;
+      
+      if (hours > 0) {
+        return `${hours}h ${minutes}m ${seconds}s`;
+      } else if (minutes > 0) {
+        return `${minutes}m ${seconds}s`;
+      } else {
+        return `${seconds}s`;
+      }
+    } catch (error) {
+      return '0s';
+    }
+  };
+
   const handlePageChange = (event, value) => {
     setPage(value);
   };
@@ -81,6 +103,9 @@ const ResumeList = () => {
               resumeName={resume.resume_name}
               uploadedBy={resume.uploaded_by}
               date={formatDate(resume.created_at)}
+              totalViewCount={resume.total_view_count || 0}
+              totalLinkCount={resume.total_link_count || 0}
+              averageReadTime={formatTimeSpent(resume.average_read_time)}
             />
           ))}
           

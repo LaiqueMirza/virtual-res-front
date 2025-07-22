@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
 import Dashboard from './components/Dashboard';
 import ResumeView from './components/ResumeView';
+import ResumeInternalView from './components/ResumeInternalView';
 import ResumeAnalytics from './components/ResumeAnalytics';
 import Login from './components/Login';
 import ProtectedRoute from './components/ProtectedRoute';
@@ -48,6 +49,11 @@ function App() {
             <Route path="/view/:id" element={
               <ProtectedRoute>
                 <ResumeView />
+              </ProtectedRoute>
+            } />
+            <Route path="/preview/:id" element={
+              <ProtectedRoute>
+                <ResumeInternalView />
               </ProtectedRoute>
             } />
             <Route path="/resume-analytics/:id" element={

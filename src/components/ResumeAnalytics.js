@@ -7,7 +7,6 @@ import {
   Card,
   CardContent,
   Button,
-  Chip,
   Accordion,
   AccordionSummary,
   AccordionDetails,
@@ -17,27 +16,21 @@ import {
   CircularProgress,
   Alert,
   IconButton,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
   Table,
   TableBody,
   TableCell,
   TableContainer,
   TableHead,
   TableRow,
-  Link
+  Tooltip
 } from '@mui/material';
 import {
   ExpandMore as ExpandMoreIcon,
   ArrowBack as ArrowBackIcon,
   Visibility as VisibilityIcon,
   Schedule as ScheduleIcon,
-  Language as LanguageIcon,
   Computer as ComputerIcon,
   LocationOn as LocationOnIcon,
-  Close as CloseIcon,
   TouchApp as TouchAppIcon
 } from '@mui/icons-material';
 import axios from '../utils/axiosConfig';
@@ -48,12 +41,7 @@ const ResumeAnalytics = () => {
   const [analyticsData, setAnalyticsData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [trackingModalOpen, setTrackingModalOpen] = useState(false);
-  const [selectedViewData, setSelectedViewData] = useState(null);
-
-  useEffect(() => {
-    fetchAnalyticsData();
-  }, [id]);
+  const [expandedView, setExpandedView] = useState(null);
 
   const fetchAnalyticsData = async () => {
     try {
@@ -74,6 +62,10 @@ const ResumeAnalytics = () => {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    fetchAnalyticsData();
+  }, [id]);
 
   const formatDate = (dateString) => {
     if (!dateString) return 'N/A';
@@ -111,64 +103,60 @@ const ResumeAnalytics = () => {
     }
   };
 
-  const calculateTotalViews = () => {
-    if (!analyticsData?.resume_shared) return 0;
-    return analyticsData.resume_shared.reduce((total, share) => {
-      return total + (share.resume_viewed ? share.resume_viewed.length : 0);
-    }, 0);
-  };
+  // const calculateTotalViews = () => {
+  //   if (!analyticsData?.resume_shared) return 0;
+  //   return analyticsData.resume_shared.reduce((total, share) => {
+  //     return total + (share.resume_viewed ? share.resume_viewed.length : 0);
+  //   }, 0);
+  // };
 
-  const calculateTotalLinks = () => {
-    return analyticsData?.resume_shared?.length || 0;
-  };
+  // const calculateTotalLinks = () => {
+  //   return analyticsData?.resume_shared?.length || 0;
+  // };
 
-  const calculateAverageTimeSpent = () => {
-    if (!analyticsData?.resume_shared) return '0s';
+  // const calculateAverageTimeSpent = () => {
+  //   if (!analyticsData?.resume_shared) return '0s';
     
-    let totalSeconds = 0;
-    let viewCount = 0;
+  //   let totalSeconds = 0;
+  //   let viewCount = 0;
     
-    analyticsData.resume_shared.forEach(share => {
-      if (share.resume_viewed) {
-        share.resume_viewed.forEach(view => {
-          if (view.total_time_spent) {
-            try {
-              const parts = view.total_time_spent.split(':');
-              const seconds = (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseInt(parts[2]) || 0);
-              totalSeconds += seconds;
-              viewCount++;
-            } catch (error) {
-              // Skip invalid time format
-            }
-          }
-        });
-      }
-    });
+  //   analyticsData.resume_shared.forEach(share => {
+  //     if (share.resume_viewed) {
+  //       share.resume_viewed.forEach(view => {
+  //         if (view.total_time_spent) {
+  //           try {
+  //             const parts = view.total_time_spent.split(':');
+  //             const seconds = (parseInt(parts[0]) || 0) * 3600 + (parseInt(parts[1]) || 0) * 60 + (parseInt(parts[2]) || 0);
+  //             totalSeconds += seconds;
+  //             viewCount++;
+  //           } catch (error) {
+  //             // Skip invalid time format
+  //           }
+  //         }
+  //       });
+  //     }
+  //   });
     
-    if (viewCount === 0) return '0s';
+  //   if (viewCount === 0) return '0s';
     
-    const avgSeconds = Math.round(totalSeconds / viewCount);
-    const hours = Math.floor(avgSeconds / 3600);
-    const minutes = Math.floor((avgSeconds % 3600) / 60);
-    const secs = avgSeconds % 60;
+  //   const avgSeconds = Math.round(totalSeconds / viewCount);
+  //   const hours = Math.floor(avgSeconds / 3600);
+  //   const minutes = Math.floor((avgSeconds % 3600) / 60);
+  //   const secs = avgSeconds % 60;
     
-    if (hours > 0) {
-      return `${hours}h ${minutes}m ${secs}s`;
-    } else if (minutes > 0) {
-      return `${minutes}m ${secs}s`;
-    } else {
-      return `${secs}s`;
-    }
-  };
+  //   if (hours > 0) {
+  //     return `${hours}h ${minutes}m ${secs}s`;
+  //   } else if (minutes > 0) {
+  //     return `${minutes}m ${secs}s`;
+  //   } else {
+  //     return `${secs}s`;
+  //   }
+  // };
 
-  const handleTrackingDataClick = (viewData) => {
-    setSelectedViewData(viewData);
-    setTrackingModalOpen(true);
-  };
 
-  const handleCloseTrackingModal = () => {
-    setTrackingModalOpen(false);
-    setSelectedViewData(null);
+  const handleTrackingDataClick = (viewId) => {
+    const isExpanded = expandedView !== viewId;
+    setExpandedView(isExpanded ? viewId : null);
   };
 
   if (loading) {
@@ -215,10 +203,10 @@ const ResumeAnalytics = () => {
 
       {/* Resume Info Card */}
       <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-        <Grid container spacing={3}>
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-              <Avatar sx={{ mr: 2, bgcolor: 'primary.main' }}>
+        <Grid container spacing={3} alignItems="center">
+          <Grid item xs={12} md={4}>
+            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+              <Avatar sx={{ mr: 2, bgcolor: 'primary.main', width: 56, height: 56 }}>
                 {analyticsData.resume_data?.resume_name?.charAt(0) || 'R'}
               </Avatar>
               <Box>
@@ -234,33 +222,33 @@ const ResumeAnalytics = () => {
               </Box>
             </Box>
           </Grid>
-          <Grid item xs={12} md={6}>
-            <Box sx={{ display: 'flex', justifyContent: 'space-around', textAlign: 'center' }}>
-              <Box>
+          <Grid item xs={12} md={8}>
+            <Grid container spacing={2} textAlign="center">
+              <Grid item xs={4}>
                 <Typography variant="h5" color="primary">
-                  {calculateTotalViews()}
+                  {analyticsData.resume_data?.total_view_count || 0}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Total View Count
                 </Typography>
-              </Box>
-              <Box>
+              </Grid>
+              <Grid item xs={4}>
                 <Typography variant="h5" color="primary">
-                  {calculateTotalLinks()}
+                  {analyticsData.resume_data?.total_link_count || 0}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Total Link Count
                 </Typography>
-              </Box>
-              <Box>
+              </Grid>
+              <Grid item xs={4}>
                 <Typography variant="h5" color="primary">
-                  {calculateAverageTimeSpent()}
+                  {formatTimeSpent(analyticsData.resume_data?.average_read_time) || '0s'}
                 </Typography>
                 <Typography variant="body2" color="text.secondary">
                   Average Read Time
                 </Typography>
-              </Box>
-            </Box>
+              </Grid>
+            </Grid>
           </Grid>
         </Grid>
       </Paper>
@@ -275,25 +263,18 @@ const ResumeAnalytics = () => {
           <Accordion key={index} sx={{ mb: 2 }}>
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Grid container spacing={2} alignItems="center">
-                <Grid item xs={12} sm={3}>
+                <Grid item xs={12} sm={4}>
                   <Typography variant="subtitle1" fontWeight="bold">
                     {share.client_name || share.email || 'Unknown Client'}
                   </Typography>
                 </Grid>
-                <Grid item xs={12} sm={3}>
+                <Grid item xs={12} sm={4}>
                   <Typography variant="body2" color="text.secondary">
                     {share.share_type ? `${share.share_type.charAt(0).toUpperCase() + share.share_type.slice(1)} - ` : ''}
                     {formatDate(share.shared_at)}
                   </Typography>
                 </Grid>
-                <Grid item xs={12} sm={3}>
-                  <Chip 
-                    label={share.expires_at ? `Expires: ${formatDate(share.expires_at)}` : 'No Expiry'} 
-                    size="small" 
-                    color={share.expires_at && new Date(share.expires_at) > new Date() ? 'success' : 'error'}
-                  />
-                </Grid>
-                <Grid item xs={12} sm={3}>
+                <Grid item xs={12} sm={4}>
                   <Typography variant="body2">
                     Linked Opened: {share.resume_viewed ? share.resume_viewed.length : 0} times
                   </Typography>
@@ -303,106 +284,277 @@ const ResumeAnalytics = () => {
             
             <AccordionDetails>
               {share.resume_viewed && share.resume_viewed.length > 0 ? (
-                share.resume_viewed.map((view, viewIndex) => (
-                  <Card key={viewIndex} sx={{ mb: 2, bgcolor: 'grey.50' }}>
-                    <CardContent>
-                      <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6} md={2}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <ScheduleIcon sx={{ mr: 1, fontSize: 16 }} />
-                            <Typography variant="body2">
-                              {formatDate(view.resume_viewed_at)}
-                            </Typography>
-                          </Box>
-                          <Typography variant="caption" color="text.secondary">
-                            Date & Time
-                          </Typography>
-                        </Grid>
-                        
-                        <Grid item xs={12} sm={6} md={2}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <Typography variant="body2">
-                              {formatTimeSpent(view.total_time_spent)}
-                            </Typography>
-                          </Box>
-                          <Typography variant="caption" color="text.secondary">
-                            Time Spent
-                          </Typography>
-                        </Grid>
-                        
-                        <Grid item xs={12} sm={6} md={2}>
-                          <Typography variant="body2" sx={{ mb: 1 }}>
-                            {view.viewer_ip || 'N/A'}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            IP Address
-                          </Typography>
-                        </Grid>
-                        
-                        <Grid item xs={12} sm={6} md={2}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <ComputerIcon sx={{ mr: 1, fontSize: 16 }} />
-                            <Typography variant="body2">
-                              {view.device_type || 'Unknown'}
-                            </Typography>
-                          </Box>
-                          <Typography variant="caption" color="text.secondary">
-                            Device
-                          </Typography>
-                        </Grid>
-                        
-                        <Grid item xs={12} sm={6} md={2}>
-                          <Typography variant="body2" sx={{ mb: 1 }}>
-                            {view.browser_info || 'Unknown'}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            Browser
-                          </Typography>
-                        </Grid>
-                        
-                        <Grid item xs={12} sm={6} md={2}>
-                          <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <LocationOnIcon sx={{ mr: 1, fontSize: 16 }} />
-                            <Typography variant="body2">
-                              {view.location_city && view.location_country 
-                                ? `${view.location_city}, ${view.location_country}` 
-                                : 'Unknown'}
-                            </Typography>
-                          </Box>
-                          <Typography variant="caption" color="text.secondary">
-                            Location
-                          </Typography>
-                        </Grid>
-                      </Grid>
-                      
-                      <Divider sx={{ my: 2 }} />
-                      
-                      <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
-                          <Typography variant="body2" color="text.secondary">
-                            Scroll Percentage: {view.scroll_percentage || 0}%
-                          </Typography>
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                          <Typography variant="body2" color="text.secondary">
-                            Referrer: {view.referrer_url || 'Direct'}
-                          </Typography>
-                        </Grid>
-                      </Grid>
-                      
-                      <Box sx={{ mt: 2, display: 'flex', justifyContent: 'flex-end' }}>
-                        <Button 
-                          size="small" 
-                          variant="outlined"
-                          startIcon={<VisibilityIcon />}
-                          onClick={() => handleTrackingDataClick(view)}
-                        >
-                          Tracking Data
-                        </Button>
-                      </Box>
-                    </CardContent>
-                  </Card>
-                ))
+                share.resume_viewed.map((view, viewIndex) => {
+                  const viewId = `view-${index}-${viewIndex}`;
+                  return (
+										<Card key={viewIndex} sx={{ mb: 2, bgcolor: "grey.50" }}>
+											<CardContent>
+												<Grid container spacing={2}>
+													<Grid item xs={12} sm={6} md={2}>
+														<Box
+															sx={{
+																display: "flex",
+																alignItems: "center",
+																mb: 1,
+															}}>
+															<ScheduleIcon sx={{ mr: 1, fontSize: 16 }} />
+															<Typography variant="body2">
+																{formatDate(view.resume_viewed_at)}
+															</Typography>
+														</Box>
+														<Typography
+															variant="caption"
+															color="text.secondary">
+															Date & Time
+														</Typography>
+													</Grid>
+
+													<Grid item xs={12} sm={6} md={2}>
+														<Box
+															sx={{
+																display: "flex",
+																alignItems: "center",
+																mb: 1,
+															}}>
+															<Typography variant="body2">
+																{formatTimeSpent(view.total_time_spent)}
+															</Typography>
+														</Box>
+														<Typography
+															variant="caption"
+															color="text.secondary">
+															Time Spent
+														</Typography>
+													</Grid>
+
+													<Grid item xs={12} sm={6} md={2}>
+														<Typography variant="body2" sx={{ mb: 1 }}>
+															{view.viewer_ip || "N/A"}
+														</Typography>
+														<Typography
+															variant="caption"
+															color="text.secondary">
+															IP Address
+														</Typography>
+													</Grid>
+
+													<Grid item xs={12} sm={6} md={2}>
+														<Box
+															sx={{
+																display: "flex",
+																alignItems: "center",
+																mb: 1,
+															}}>
+															<ComputerIcon sx={{ mr: 1, fontSize: 16 }} />
+															<Typography variant="body2">
+																{view.device_type || "Unknown"}
+															</Typography>
+														</Box>
+														<Typography
+															variant="caption"
+															color="text.secondary">
+															Device
+														</Typography>
+													</Grid>
+
+													<Grid item xs={12} sm={6} md={2}>
+														<Tooltip title={view.browser_info || "Unknown"}>
+															<Typography
+																variant="body2"
+																sx={{
+																	mb: 1,
+																	whiteSpace: "nowrap",
+																	overflow: "hidden",
+																	textOverflow: "ellipsis",
+																	maxWidth: "150px",
+																}}>
+																{view.browser_info || "Unknown"}
+															</Typography>
+														</Tooltip>
+														<Typography
+															variant="caption"
+															color="text.secondary">
+															Browser
+														</Typography>
+													</Grid>
+
+													<Grid item xs={12} sm={6} md={2}>
+														<Box
+															sx={{
+																display: "flex",
+																alignItems: "center",
+																mb: 1,
+															}}>
+															<LocationOnIcon sx={{ mr: 1, fontSize: 16 }} />
+															<Typography variant="body2">
+																{view.location_city && view.location_country
+																	? `${view.location_city}, ${view.location_country}`
+																	: "Unknown"}
+															</Typography>
+														</Box>
+														<Typography
+															variant="caption"
+															color="text.secondary">
+															Location
+														</Typography>
+													</Grid>
+												</Grid>
+
+												<Divider sx={{ my: 2 }} />
+
+												<Grid container spacing={2}>
+													<Grid item xs={12} sm={6}>
+														<Typography variant="body2" color="text.secondary">
+															Scroll Percentage: {view.scroll_percentage || 0}%
+														</Typography>
+													</Grid>
+													<Grid item xs={12} sm={6}>
+														<Typography variant="body2" color="text.secondary">
+															Referrer: {view.referrer_url || "Direct"}
+														</Typography>
+													</Grid>
+												</Grid>
+												<Accordion
+													expanded={expandedView === viewId}
+													key={viewId}
+													sx={{
+														boxShadow: "none",
+														"&:before": { display: "none" },
+													}}>
+													{/* Remove the AccordionSummary completely */}
+													<AccordionSummary
+														onClick={() => handleTrackingDataClick(viewId)}
+														expandIcon={<ExpandMoreIcon />}>
+														<Typography
+															variant="h6"
+															sx={{ display: "flex", alignItems: "center" }}>
+															Tracking Data
+														</Typography>
+													</AccordionSummary>
+													<AccordionDetails>
+														<Box>
+															{/* Section Time Tracking */}
+															<Typography
+																variant="h6"
+																sx={{
+																	mb: 2,
+																	display: "flex",
+																	alignItems: "center",
+																}}>
+																<ScheduleIcon sx={{ mr: 1 }} />
+																Section Time Tracking
+															</Typography>
+
+															{view.resume_view_events &&
+															view.resume_view_events.length > 0 ? (
+																<TableContainer
+																	component={Paper}
+																	sx={{ mb: 3 }}>
+																	<Table size="small">
+																		<TableHead>
+																			<TableRow>
+																				<TableCell>
+																					<strong>Section</strong>
+																				</TableCell>
+																				<TableCell>
+																					<strong>Time Spent</strong>
+																				</TableCell>
+																			</TableRow>
+																		</TableHead>
+																		<TableBody>
+																			{view.resume_view_events.map(
+																				(event, eventIndex) => (
+																					<TableRow key={eventIndex}>
+																						<TableCell>
+																							{event.section_name ||
+																								"Unknown Section"}
+																						</TableCell>
+																						<TableCell>
+																							{formatTimeSpent(
+																								event.total_time_spent
+																							)}
+																						</TableCell>
+																					</TableRow>
+																				)
+																			)}
+																		</TableBody>
+																	</Table>
+																</TableContainer>
+															) : (
+																<Paper
+																	sx={{ p: 2, mb: 3, textAlign: "center" }}>
+																	<Typography
+																		variant="body2"
+																		color="text.secondary">
+																		No section tracking data available
+																	</Typography>
+																</Paper>
+															)}
+
+															{/* Click Events */}
+															<Typography
+																variant="h6"
+																sx={{
+																	mb: 2,
+																	display: "flex",
+																	alignItems: "center",
+																}}>
+																<TouchAppIcon sx={{ mr: 1 }} />
+																Click Events
+															</Typography>
+
+															{view.resume_click_events &&
+															view.resume_click_events.length > 0 ? (
+																<TableContainer component={Paper}>
+																	<Table size="small">
+																		<TableHead>
+																			<TableRow>
+																				<TableCell>
+																					<strong>Element ID</strong>
+																				</TableCell>
+																				<TableCell>
+																					<strong>Element Text</strong>
+																				</TableCell>
+																				<TableCell>
+																					<strong>Timestamp</strong>
+																				</TableCell>
+																			</TableRow>
+																		</TableHead>
+																		<TableBody>
+																			{view.resume_click_events.map(
+																				(click, clickIndex) => (
+																					<TableRow key={clickIndex}>
+																						<TableCell>
+																							{click.element_id}
+																						</TableCell>
+																						<TableCell>
+																							{click.element_text}
+																						</TableCell>
+																						<TableCell>
+																							{formatDate(click.created_at)}
+																						</TableCell>
+																					</TableRow>
+																				)
+																			)}
+																		</TableBody>
+																	</Table>
+																</TableContainer>
+															) : (
+																<Paper sx={{ p: 2, textAlign: "center" }}>
+																	<Typography
+																		variant="body2"
+																		color="text.secondary">
+																		No click events recorded.
+																	</Typography>
+																</Paper>
+															)}
+														</Box>
+													</AccordionDetails>
+												</Accordion>
+											</CardContent>
+										</Card>
+									);
+                })
               ) : (
                 <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
                   No views recorded for this link yet.
@@ -418,140 +570,6 @@ const ResumeAnalytics = () => {
           </Typography>
         </Paper>
       )}
-
-      {/* Tracking Data Modal */}
-      <Dialog 
-        open={trackingModalOpen} 
-        onClose={handleCloseTrackingModal}
-        maxWidth="lg"
-        fullWidth
-      >
-        <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <Typography variant="h6">Detailed Tracking Data</Typography>
-          <IconButton onClick={handleCloseTrackingModal}>
-            <CloseIcon />
-          </IconButton>
-        </DialogTitle>
-        
-        <DialogContent>
-          {selectedViewData && (
-            <Box>
-              {/* View Summary */}
-              <Paper sx={{ p: 2, mb: 3, bgcolor: 'grey.50' }}>
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Typography variant="body2" color="text.secondary">Viewed At</Typography>
-                    <Typography variant="body1">{formatDate(selectedViewData.resume_viewed_at)}</Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Typography variant="body2" color="text.secondary">Total Time</Typography>
-                    <Typography variant="body1">{formatTimeSpent(selectedViewData.total_time_spent)}</Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Typography variant="body2" color="text.secondary">Device</Typography>
-                    <Typography variant="body1">{selectedViewData.device_type || 'Unknown'}</Typography>
-                  </Grid>
-                  <Grid item xs={12} sm={6} md={3}>
-                    <Typography variant="body2" color="text.secondary">Location</Typography>
-                    <Typography variant="body1">
-                      {selectedViewData.location_city && selectedViewData.location_country 
-                        ? `${selectedViewData.location_city}, ${selectedViewData.location_country}` 
-                        : 'Unknown'}
-                    </Typography>
-                  </Grid>
-                </Grid>
-              </Paper>
-
-              {/* Section Time Tracking */}
-              <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-                <ScheduleIcon sx={{ mr: 1 }} />
-                Section Time Tracking
-              </Typography>
-              
-              {selectedViewData.resume_view_events && selectedViewData.resume_view_events.length > 0 ? (
-                <TableContainer component={Paper} sx={{ mb: 3 }}>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell><strong>Section</strong></TableCell>
-                        <TableCell><strong>Time Spent</strong></TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {selectedViewData.resume_view_events.map((event, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{event.section_name || 'Unknown Section'}</TableCell>
-                          <TableCell>{formatTimeSpent(event.total_time_spent)}</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              ) : (
-                <Paper sx={{ p: 2, mb: 3, textAlign: 'center' }}>
-                  <Typography variant="body2" color="text.secondary">
-                    No section tracking data available
-                  </Typography>
-                </Paper>
-              )}
-
-              {/* Click Events */}
-              <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center' }}>
-                <TouchAppIcon sx={{ mr: 1 }} />
-                Click Events
-              </Typography>
-              
-              {selectedViewData.resume_click_events && selectedViewData.resume_click_events.length > 0 ? (
-                <TableContainer component={Paper}>
-                  <Table>
-                    <TableHead>
-                      <TableRow>
-                        <TableCell><strong>Section</strong></TableCell>
-                        <TableCell><strong>Element Text</strong></TableCell>
-                        <TableCell><strong>Link/Action</strong></TableCell>
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {selectedViewData.resume_click_events.map((event, index) => (
-                        <TableRow key={index}>
-                          <TableCell>{event.section_name || 'Unknown Section'}</TableCell>
-                          <TableCell>{event.element_text || 'N/A'}</TableCell>
-                          <TableCell>
-                            {event.link ? (
-                              <Link 
-                                href={event.link} 
-                                target="_blank" 
-                                rel="noopener noreferrer"
-                                sx={{ wordBreak: 'break-all' }}
-                              >
-                                {event.link}
-                              </Link>
-                            ) : (
-                              'N/A'
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </TableContainer>
-              ) : (
-                <Paper sx={{ p: 2, textAlign: 'center' }}>
-                  <Typography variant="body2" color="text.secondary">
-                    No click events recorded
-                  </Typography>
-                </Paper>
-              )}
-            </Box>
-          )}
-        </DialogContent>
-        
-        <DialogActions>
-          <Button onClick={handleCloseTrackingModal} variant="contained">
-            Close
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };
