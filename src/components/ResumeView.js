@@ -899,7 +899,6 @@ const ResumeView = () => {
 
 		// Only log if we're actually sending data
 		console.log("Sending view time data:", payload);
-		debugger;
 
 		// Try sendBeacon first for page unload scenarios, but with proper fallback
 		if (navigator.sendBeacon && process.env.REACT_APP_API_BASE_URL) {
