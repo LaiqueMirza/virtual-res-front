@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
-import { Box, Typography, TextField, Button, InputAdornment } from '@mui/material';
+import { Box, Typography, TextField, Button, InputAdornment, useMediaQuery, useTheme, IconButton } from '@mui/material';
 import SearchIcon from '@mui/icons-material/Search';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
 import UploadResumePopup from './UploadResumePopup';
 import LogoutButton from './LogoutButton';
 
 const Header = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
   const [uploadPopupOpen, setUploadPopupOpen] = useState(false);
 
   const handleOpenUploadPopup = () => {
@@ -17,12 +20,25 @@ const Header = () => {
   };
 
   return (
-    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 3 }}>
-      <Typography variant="h5" component="div">
+    <Box sx={{
+      display: 'flex', 
+      flexDirection: { xs: 'column', md: 'row' },
+      justifyContent: 'space-between', 
+      alignItems: { xs: 'flex-start', md: 'center' }, 
+      gap: { xs: 2, md: 0 },
+      mb: 3
+    }}>
+      <Typography variant="h5" component="div" sx={{ mb: { xs: 1, md: 0 } }}>
         Resumes analytics
       </Typography>
       
-      <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+      <Box sx={{
+        display: 'flex', 
+        flexDirection: { xs: 'column', sm: 'row' },
+        gap: 2, 
+        alignItems: { xs: 'stretch', sm: 'center' },
+        width: { xs: '100%', md: 'auto' }
+      }}>
         <TextField
           size="small"
           placeholder="search"
@@ -33,17 +49,21 @@ const Header = () => {
               </InputAdornment>
             ),
           }}
-          sx={{ width: 250 }}
+          sx={{ width: { xs: '100%', sm: 200, md: 250 } }}
         />
         
         <Button 
           variant="contained" 
           color="success" 
           startIcon={<CloudUploadIcon />}
-          sx={{ textTransform: 'none' }}
+          sx={{ 
+            textTransform: 'none',
+            whiteSpace: 'nowrap',
+            width: { xs: '100%', sm: 'auto' }
+          }}
           onClick={handleOpenUploadPopup}
         >
-          Upload New Resume
+          {isMobile ? 'Upload' : 'Upload New Resume'}
         </Button>
         
         {/* Logout Button */}

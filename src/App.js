@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { CssBaseline, ThemeProvider, createTheme } from '@mui/material';
+import { CssBaseline, ThemeProvider, createTheme, responsiveFontSizes } from '@mui/material';
 import Dashboard from './components/Dashboard';
 import ResumeView from './components/ResumeView';
 import ResumeInternalView from './components/ResumeInternalView';
@@ -10,8 +10,8 @@ import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import './App.css';
 
-// Create a custom theme
-const theme = createTheme({
+// Create a custom theme with responsive settings
+let theme = createTheme({
   palette: {
     primary: {
       main: '#673ab7', // Purple color to match the sidebar
@@ -23,7 +23,28 @@ const theme = createTheme({
   typography: {
     fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
   },
+  components: {
+    MuiButton: {
+      styleOverrides: {
+        root: {
+          textTransform: 'none',
+        },
+      },
+    },
+  },
+  breakpoints: {
+    values: {
+      xs: 0,
+      sm: 600,
+      md: 960,
+      lg: 1280,
+      xl: 1920,
+    },
+  },
 });
+
+// Apply responsive font sizes
+theme = responsiveFontSizes(theme);
 
 function App() {
   return (
