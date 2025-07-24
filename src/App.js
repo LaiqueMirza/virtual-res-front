@@ -6,6 +6,7 @@ import ResumeView from './components/ResumeView';
 import ResumeInternalView from './components/ResumeInternalView';
 import ResumeAnalytics from './components/ResumeAnalytics';
 import Login from './components/Login';
+import NotFound from './components/NotFound';
 import ProtectedRoute from './components/ProtectedRoute';
 import { AuthProvider } from './context/AuthContext';
 import './App.css';
@@ -82,6 +83,9 @@ function App() {
                 <ResumeAnalytics />
               </ProtectedRoute>
             } />
+            
+            {/* 404 Page - Catch all unmatched routes */}
+            <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
       </ThemeProvider>
