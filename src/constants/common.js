@@ -169,3 +169,6 @@ export const resumePreviewTemplate = (jsonString) => {
         return `<div style="color: red; padding: 20px;">Error rendering resume: ${error.message}</div>`;
     }
 }
+
+
+export const frontendBaseUrl = typeof window !== "undefined" ? `${window.location.protocol}//${window.location.hostname}${window.location.port ? `:${window.location.port}` : ''}` : "http://localhost:3000";

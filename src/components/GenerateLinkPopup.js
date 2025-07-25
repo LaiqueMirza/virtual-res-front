@@ -16,6 +16,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import ContentCopyIcon from '@mui/icons-material/ContentCopy';
 import axios from '../utils/axiosConfig';
+import { frontendBaseUrl } from '../constants/common';
 
 const GenerateLinkPopup = ({ open, onClose, resumeId, resumeName }) => {
   const [clientName, setClientName] = useState('');
@@ -50,17 +51,20 @@ const GenerateLinkPopup = ({ open, onClose, resumeId, resumeName }) => {
     setSubmitError('');
 
     try {
-      const response = await axios.post('/v1/resume/share/link', {
-        client_name: clientName,
-        resumes_uploaded_id: resumeId,
-      });
+      const response = await axios.post("/v1/resume/share/link", {
+				client_name: clientName,
+				resumes_uploaded_id: resumeId,
+				referrer_url: frontendBaseUrl,
+			});
 
       const { data } = response.data;
       if (!data) {
         throw new Error('Failed to generate link');
       }
 
-      const shareLink = `${process.env.REACT_APP_FRONTEND_URL}/view/${data.share_link_id}`;
+      // Use dynamic frontend URL instead of environment variable
+      const shareLink = `${frontendBaseUrl}/view/${data.share_link_id}`;
+
       setGeneratedLink(shareLink);
     } catch (error) {
       console.error('Error generating link:', error);

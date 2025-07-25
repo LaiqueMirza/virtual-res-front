@@ -197,103 +197,123 @@ const ResumeAnalytics = () => {
   }
 
   return (
-    <Box sx={{ p: 3, maxWidth: 1200, mx: 'auto' }}>
-      {/* Header */}
-      <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
-        <IconButton onClick={() => navigate(-1)} sx={{ mr: 2 }}>
-          <ArrowBackIcon />
-        </IconButton>
-        <Typography variant="h4" component="h1">
-          Resume Analytics
-        </Typography>
-      </Box>
+		<Box sx={{ p: 3, maxWidth: 1200, mx: "auto" }}>
+			{/* Header */}
+			<Box sx={{ display: "flex", alignItems: "center", mb: 3 }}>
+				<IconButton onClick={() => navigate(-1)} sx={{ mr: 2 }}>
+					<ArrowBackIcon />
+				</IconButton>
+				<Typography variant="h4" component="h1">
+					Resume Analytics
+				</Typography>
+			</Box>
 
-      {/* Resume Info Card */}
-      <Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
-        <Grid container spacing={3} alignItems="center">
-          <Grid item xs={12} md={4}>
-            <Box sx={{ display: 'flex', alignItems: 'center' }}>
-              <Avatar sx={{ mr: 2, bgcolor: 'primary.main', width: 56, height: 56 }}>
-                {analyticsData.resume_data?.resume_name?.charAt(0) || 'R'}
-              </Avatar>
-              <Box>
-                <Typography variant="h6">
-                  {analyticsData.resume_data?.resume_name || 'Unknown Resume'}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Uploaded by - {analyticsData.resume_data?.uploaded_by || 'Unknown'}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  {formatDate(analyticsData.resume_data?.uploaded_at)}
-                </Typography>
-              </Box>
-            </Box>
-          </Grid>
-          <Grid item xs={12} md={8}>
-            <Grid container spacing={2} textAlign="center">
-              <Grid item xs={4}>
-                <Typography variant="h5" color="primary">
-                  {analyticsData.resume_data?.total_view_count || 0}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Total View Count
-                </Typography>
-              </Grid>
-              <Grid item xs={4}>
-                <Typography variant="h5" color="primary">
-                  {analyticsData.resume_data?.total_link_count || 0}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Total Link Count
-                </Typography>
-              </Grid>
-              <Grid item xs={4}>
-                <Typography variant="h5" color="primary">
-                  {formatTimeSpent(analyticsData.resume_data?.average_read_time) || '0s'}
-                </Typography>
-                <Typography variant="body2" color="text.secondary">
-                  Average Read Time
-                </Typography>
-              </Grid>
-            </Grid>
-          </Grid>
-        </Grid>
-      </Paper>
+			{/* Resume Info Card */}
+			<Paper sx={{ p: 3, mb: 3, borderRadius: 2 }}>
+				<Grid container spacing={3} alignItems="center">
+					<Grid item xs={12} md={4}>
+						<Box sx={{ display: "flex", alignItems: "center" }}>
+							<Avatar
+								sx={{ mr: 2, bgcolor: "primary.main", width: 56, height: 56 }}>
+								{analyticsData.resume_data?.resume_name?.charAt(0) || "R"}
+							</Avatar>
+							<Box>
+								<Typography variant="h6">
+									{analyticsData.resume_data?.resume_name || "Unknown Resume"}
+								</Typography>
+								<Typography variant="body2" color="text.secondary">
+									Uploaded by -{" "}
+									{analyticsData.resume_data?.uploaded_by || "Unknown"}
+								</Typography>
+								<Typography variant="body2" color="text.secondary">
+									{formatDate(analyticsData.resume_data?.uploaded_at)}
+								</Typography>
+							</Box>
+						</Box>
+					</Grid>
+					<Grid item xs={12} md={8}>
+						<Grid container spacing={2} textAlign="center">
+							<Grid item xs={4}>
+								<Typography variant="h5" color="primary">
+									{analyticsData.resume_data?.total_view_count || 0}
+								</Typography>
+								<Typography variant="body2" color="text.secondary">
+									Total View Count
+								</Typography>
+							</Grid>
+							<Grid item xs={4}>
+								<Typography variant="h5" color="primary">
+									{analyticsData.resume_data?.total_link_count || 0}
+								</Typography>
+								<Typography variant="body2" color="text.secondary">
+									Total Link Count
+								</Typography>
+							</Grid>
+							<Grid item xs={4}>
+								<Typography variant="h5" color="primary">
+									{formatTimeSpent(
+										analyticsData.resume_data?.average_read_time
+									) || "0s"}
+								</Typography>
+								<Typography variant="body2" color="text.secondary">
+									Average Read Time
+								</Typography>
+							</Grid>
+						</Grid>
+					</Grid>
+				</Grid>
+			</Paper>
 
-      {/* Shared Links */}
-      <Typography variant="h5" sx={{ mb: 2 }}>
-        Shared Links
-      </Typography>
-      
-      {analyticsData.resume_shared && analyticsData.resume_shared.length > 0 ? (
-        analyticsData.resume_shared.map((share, index) => (
-          <Accordion key={index} sx={{ mb: 2 }}>
-            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-              <Grid container spacing={2} alignItems="center">
-                <Grid item xs={12} sm={4}>
-                  <Typography variant="subtitle1" fontWeight="bold">
-                    {share.client_name || share.email || 'Unknown Client'}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <Typography variant="body2" color="text.secondary">
-                    {share.share_type ? `${share.share_type.charAt(0).toUpperCase() + share.share_type.slice(1)} - ` : ''}
-                    {formatDate(share.shared_at)}
-                  </Typography>
-                </Grid>
-                <Grid item xs={12} sm={4}>
-                  <Typography variant="body2">
-                    Linked Opened: {share.resume_viewed ? share.resume_viewed.length : 0} times
-                  </Typography>
-                </Grid>
-              </Grid>
-            </AccordionSummary>
-            
-            <AccordionDetails>
-              {share.resume_viewed && share.resume_viewed.length > 0 ? (
-                share.resume_viewed.map((view, viewIndex) => {
-                  const viewId = `view-${index}-${viewIndex}`;
-                  return (
+			{/* Shared Links */}
+			<Typography variant="h5" sx={{ mb: 2 }}>
+				Shared Links
+			</Typography>
+
+			{analyticsData.resume_shared && analyticsData.resume_shared.length > 0 ? (
+				analyticsData.resume_shared.map((share, index) => (
+					<Accordion key={index} sx={{ mb: 2 }}>
+						<AccordionSummary expandIcon={<ExpandMoreIcon />}>
+							<Grid container spacing={2} alignItems="center">
+								<Grid item xs={12} sm={4}>
+									<Typography variant="subtitle1" fontWeight="bold">
+										{share.client_name || share.email || "Unknown Client"}
+									</Typography>
+								</Grid>
+								<Grid item xs={12} sm={4}>
+									<Typography variant="body2" color="text.secondary">
+										<Box 
+											component="span" 
+											sx={{ 
+												cursor: 'text', 
+												userSelect: 'all',
+												display: 'inline-block'
+											}}
+										>
+											{share.referrer_url || "Direct"}
+										</Box>
+										{/* {share.share_type
+											? `${
+													share.share_type.charAt(0).toUpperCase() +
+													share.share_type.slice(1)
+											  } - `
+											: ""}
+										{formatDate(share.shared_at)} */}
+									</Typography>
+								</Grid>
+								<Grid item xs={12} sm={4}>
+									<Typography variant="body2">
+										Linked Opened:{" "}
+										{share.resume_viewed ? share.resume_viewed.length : 0} times
+									</Typography>
+								</Grid>
+							</Grid>
+						</AccordionSummary>
+
+						<AccordionDetails>
+							{share.resume_viewed && share.resume_viewed.length > 0 ? (
+								share.resume_viewed.map((view, viewIndex) => {
+									const viewId = `view-${index}-${viewIndex}`;
+									return (
 										<Card key={viewIndex} sx={{ mb: 2, bgcolor: "grey.50" }}>
 											<CardContent>
 												<Grid container spacing={2}>
@@ -413,11 +433,6 @@ const ResumeAnalytics = () => {
 													<Grid item xs={12} sm={6}>
 														<Typography variant="body2" color="text.secondary">
 															Scroll Percentage: {view.scroll_percentage || 0}%
-														</Typography>
-													</Grid>
-													<Grid item xs={12} sm={6}>
-														<Typography variant="body2" color="text.secondary">
-															Referrer: {view.referrer_url || "Direct"}
 														</Typography>
 													</Grid>
 												</Grid>
@@ -561,24 +576,27 @@ const ResumeAnalytics = () => {
 											</CardContent>
 										</Card>
 									);
-                })
-              ) : (
-                <Typography variant="body2" color="text.secondary" sx={{ textAlign: 'center', py: 2 }}>
-                  No views recorded for this link yet.
-                </Typography>
-              )}
-            </AccordionDetails>
-          </Accordion>
-        ))
-      ) : (
-        <Paper sx={{ p: 3, textAlign: 'center' }}>
-          <Typography variant="body1" color="text.secondary">
-            No shared links found for this resume.
-          </Typography>
-        </Paper>
-      )}
-    </Box>
-  );
+								})
+							) : (
+								<Typography
+									variant="body2"
+									color="text.secondary"
+									sx={{ textAlign: "center", py: 2 }}>
+									No views recorded for this link yet.
+								</Typography>
+							)}
+						</AccordionDetails>
+					</Accordion>
+				))
+			) : (
+				<Paper sx={{ p: 3, textAlign: "center" }}>
+					<Typography variant="body1" color="text.secondary">
+						No shared links found for this resume.
+					</Typography>
+				</Paper>
+			)}
+		</Box>
+	);
 };
 
 export default ResumeAnalytics;

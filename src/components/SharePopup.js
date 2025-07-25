@@ -12,6 +12,7 @@ import {
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import axios from '../utils/axiosConfig';
+import { frontendBaseUrl } from '../constants/common';
 
 const SharePopup = ({ open, onClose, resumeId, resumeName }) => {
   const [emails, setEmails] = useState('');
@@ -61,10 +62,11 @@ const SharePopup = ({ open, onClose, resumeId, resumeName }) => {
     try {
       const emailList = emails.split(',').map(email => email.trim());
 
-      const response = await axios.post('/v1/resume/share/email', {
-        emails: emailList,
-        resumes_uploaded_id: resumeId,
-      });
+      const response = await axios.post("/v1/resume/share/email", {
+				emails: emailList,
+				resumes_uploaded_id: resumeId,
+				referrer_url: frontendBaseUrl,
+			});
 
       setSubmitSuccess(true);
       setEmails('');

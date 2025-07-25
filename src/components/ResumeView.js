@@ -485,7 +485,6 @@ const ResumeView = () => {
 					browser_info: `${userInfo.browserName} (${userInfo.userAgent})`,
 					location_city: userInfo.city,
 					location_country: userInfo.country,
-					referrer_url: window.location.href,
 				};
 
 				// Include resumeViewsId in the payload if it's already available from Redux
