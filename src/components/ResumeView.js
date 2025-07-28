@@ -835,7 +835,6 @@ const ResumeView = () => {
 				console.log(
 					`Section ${sectionId} was visible for ${durationInSeconds} seconds`
 				);
-				const token = Cookies.get("token"); // Retrieve token from cookies
 				// Make API call to track section exit event
 				if (resumeViewsId) {
 					// Use sendBeacon for more reliable data sending during page unload
@@ -846,7 +845,6 @@ const ResumeView = () => {
 							section_name: sectionId,
 							total_time_spent: durationInSeconds,
 							view_end_time: exitTime.toISOString(),
-							token,
 						});
 
 						navigator.sendBeacon(
@@ -887,13 +885,10 @@ const ResumeView = () => {
 			(sessionEndTime - sessionStartTime.current) / 1000
 		); // Convert to seconds
 
-		const token = Cookies.get("token"); // Retrieve token from cookies
-
 		const payload = {
 			resume_views_id: resumeViewsId,
 			total_time_spent: totalSessionDuration,
 			view_end_time: sessionEndTime.toISOString(),
-			token: token, // Include token in the payload
 		};
 
 		// Only log if we're actually sending data
@@ -971,9 +966,9 @@ const ResumeView = () => {
 			// Then send overall view time data
 			sendViewTimeData();
 		};
-		window.addEventListener("beforeunload", handleBeforeUnload);
+		window.addEventListener("beforeunload", handleBeforeUnload, {capture: true});
 		return () => {
-			window.removeEventListener("beforeunload", handleBeforeUnload);
+			window.removeEventListener("beforeunload", handleBeforeUnload, {capture: true});
 			// 	// Only track section exits and send view time data when the component is truly unmounting
 			// 	// or when the user is navigating away, but not during internal re-renders
 			// 	// We also check if beforeunload was triggered to avoid duplicate calls
