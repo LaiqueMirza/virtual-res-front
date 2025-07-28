@@ -1,8 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useLocation } from "react-router-dom"; // Added useLocation to detect route changes
 import { Box, Typography, CircularProgress, Paper } from "@mui/material";
-import { useDispatch, useSelector } from "react-redux";
-import { setResumeViewsId } from "../redux/reducers/resumeReducer";
 import axios from "../utils/axiosConfig";
 
 // Resume view component that renders a resume using Material-UI components
@@ -18,8 +16,22 @@ const ResumeView = () => {
 			return encodedId; // Fallback to encoded ID if decoding fails
 		}
 	}, [encodedId]);
-	const dispatch = useDispatch();
-	const resumeViewsId = useSelector((state) => state.resume.resumeViewsId);
+	
+	// Replace Redux with sessionStorage for resumeViewsId
+	const [resumeViewsId, setResumeViewsIdState] = useState(() => {
+		return sessionStorage.getItem('resumeViewsId');
+	});
+	
+	// Helper function to update resumeViewsId in both state and sessionStorage
+	const setResumeViewsId = (id) => {
+		setResumeViewsIdState(id);
+		if (id) {
+			sessionStorage.setItem('resumeViewsId', id);
+		} else {
+			sessionStorage.removeItem('resumeViewsId');
+		}
+	};
+	
 	const [resume, setResume] = useState(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
@@ -82,13 +94,13 @@ const ResumeView = () => {
 			console.log("event type", eventType, " : ", eventData);
 			// In a real implementation, you would send this data to your backend
 			// Example:
-			// Use resumeViewsId from Redux
+			// Use resumeViewsId from sessionStorage
 			// fetch(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/engagement`, {
 			//   method: 'POST',
 			//   headers: { 'Content-Type': 'application/json' },
 			//   body: JSON.stringify({
 			//     resume_share_links_id: resume_share_links_id,
-			//     resume_views_id: currentResumeViewsId,
+			//     resume_views_id: resumeViewsId,
 			//     event_type: eventType,
 			//     event_data: eventData,
 			//     timestamp: Date.now()
@@ -96,8 +108,8 @@ const ResumeView = () => {
 			// });
 			// eslint-disable-next-line react-hooks/exhaustive-deps
 		},
-		[resume_share_links_id, dispatch]
-	); // 'resume_share_links_id' is needed for the commented code
+		[resume_share_links_id]
+	); // Removed dispatch dependency
 
 	// Function to set up IntersectionObserver for section visibility tracking
 	// Wrapped in useCallback to prevent recreation on every render
@@ -506,9 +518,9 @@ const ResumeView = () => {
 				setResume(data);
 				setLoading(false);
 
-				// Store resume_views_id in Redux for persistence
+				// Store resume_views_id in sessionStorage for persistence
 				if (data && data.resume_views_id) {
-					dispatch(setResumeViewsId(data.resume_views_id));
+					setResumeViewsId(data.resume_views_id);
 				}
 				// eslint-disable-next-line react-hooks/exhaustive-deps
 
@@ -834,39 +846,72 @@ const ResumeView = () => {
 				console.log(
 					`Section ${sectionId} was visible for ${durationInSeconds} seconds`
 				);
-				// Make API call to track section exit event
-				if (resumeViewsId) {
-					// Use sendBeacon for more reliable data sending during page unload
-					if (navigator.sendBeacon) {
-						const data = JSON.stringify({
-							resume_views_id: resumeViewsId,
-							resume_share_links_id: resume_share_links_id,
-							section_name: sectionId,
-							total_time_spent: durationInSeconds,
-							view_end_time: exitTime.toISOString(),
-						});
 
-						navigator.sendBeacon(
-							`${process.env.REACT_APP_API_BASE_URL}/v1/resume/track-event`,
-							new Blob([data], { type: "application/json" })
-						);
-					} else {
-						// Fallback to axios if sendBeacon is not available
-						axios
-							.post("/v1/resume/track-event", {
-								resume_views_id: resumeViewsId,
-								resume_share_links_id: resume_share_links_id,
-								section_name: sectionId,
-								total_time_spent: durationInSeconds,
-								view_end_time: exitTime.toISOString(),
-							})
-							.catch((error) => {
-								console.error(
-									`Error tracking exit for section ${sectionId}:`,
-									error
+				const payload = {
+					resume_views_id: resumeViewsId,
+					resume_share_links_id: resume_share_links_id,
+					section_name: sectionId,
+					total_time_spent: durationInSeconds,
+					view_end_time: exitTime.toISOString(),
+				};
+
+				console.log("Sending section exit data:", payload);
+
+				// For tab closing scenarios, use a synchronous approach with fetch + keepalive
+				// This is more reliable than sendBeacon for our use case
+				try {
+					// Use fetch with keepalive flag for page unload scenarios
+					fetch(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/track-event`, {
+						method: 'POST',
+						headers: {
+							'Content-Type': 'application/json',
+						},
+						body: JSON.stringify(payload),
+						keepalive: true, // This ensures the request continues even if the page unloads
+					})
+					.then(response => {
+						if (response.ok) {
+							console.log(`Section exit data sent successfully via fetch with keepalive for section: ${sectionId}`);
+						} else {
+							console.error(`Fetch request failed with status: ${response.status} for section: ${sectionId}`);
+						}
+					})
+					.catch(error => {
+						console.error(`Error with fetch keepalive for section ${sectionId}:`, error);
+						
+						// Fallback to sendBeacon if fetch fails
+						if (navigator.sendBeacon) {
+							try {
+								const data = JSON.stringify(payload);
+								const url = `${process.env.REACT_APP_API_BASE_URL}/v1/resume/track-event`;
+								const success = navigator.sendBeacon(
+									url,
+									new Blob([data], { type: "application/json" })
 								);
-							});
-					}
+								if (success) {
+									console.log(`Section exit data sent successfully via sendBeacon (fallback) for section: ${sectionId}`);
+								} else {
+									console.error(`sendBeacon also failed for section: ${sectionId}`);
+								}
+							} catch (beaconError) {
+								console.error(`sendBeacon fallback failed for section ${sectionId}:`, beaconError);
+							}
+						}
+					});
+				} catch (error) {
+					console.error(`Error setting up fetch request for section ${sectionId}:`, error);
+					
+					// Final fallback to axios for non-unload scenarios
+					axios
+						.post("/v1/resume/track-event", payload, {
+							timeout: 2000,
+						})
+						.then((response) => {
+							console.log(`Section exit data sent successfully via axios for section: ${sectionId}`, response.data);
+						})
+						.catch((axiosError) => {
+							console.error(`All methods failed to send section exit data for section ${sectionId}:`, axiosError);
+						});
 				}
 			}
 		});

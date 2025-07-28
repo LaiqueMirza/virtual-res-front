@@ -538,6 +538,9 @@ const ResumeAnalytics = () => {
 																					<strong>Element Text</strong>
 																				</TableCell>
 																				<TableCell>
+																					<strong>Link</strong>
+																				</TableCell>
+																				<TableCell>
 																					<strong>Timestamp</strong>
 																				</TableCell>
 																			</TableRow>
@@ -547,10 +550,13 @@ const ResumeAnalytics = () => {
 																				(click, clickIndex) => (
 																					<TableRow key={clickIndex}>
 																						<TableCell>
-																							{click.element_id}
+																							{click.section_name}
 																						</TableCell>
 																						<TableCell>
 																							{click.element_text}
+																						</TableCell>
+																						<TableCell>
+																							{click.link}
 																						</TableCell>
 																						<TableCell>
 																							{formatDate(click.created_at)}
