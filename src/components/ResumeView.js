@@ -4,7 +4,6 @@ import { Box, Typography, CircularProgress, Paper } from "@mui/material";
 import { useDispatch, useSelector } from "react-redux";
 import { setResumeViewsId } from "../redux/reducers/resumeReducer";
 import axios from "../utils/axiosConfig";
-import Cookies from "js-cookie";
 
 // Resume view component that renders a resume using Material-UI components
 
@@ -891,51 +890,64 @@ const ResumeView = () => {
 			view_end_time: sessionEndTime.toISOString(),
 		};
 
-		// Only log if we're actually sending data
 		console.log("Sending view time data:", payload);
 
-		// Try sendBeacon first for page unload scenarios, but with proper fallback
-		if (navigator.sendBeacon && process.env.REACT_APP_API_BASE_URL) {
-			try {
-				const data = JSON.stringify(payload);
-				const success = navigator.sendBeacon(
-					`${process.env.REACT_APP_API_BASE_URL}/v1/resume/update-view-time`,
-					new Blob([data], { type: "application/json" })
-				);
-
-				if (success) {
-					console.log("View time data sent successfully via sendBeacon");
-					return;
-				} else {
-					console.warn("sendBeacon failed, falling back to axios");
-				}
-			} catch (error) {
-				console.error("Error with sendBeacon:", error);
-			}
-		}
-
-		// Fallback to axios (more reliable for debugging)
-		axios
-			.post("/v1/resume/update-view-time", payload)
-			.then((response) => {
-				console.log(
-					"View time data sent successfully via axios:",
-					response.data
-				);
+		// For tab closing scenarios, use a synchronous approach with fetch + keepalive
+		// This is more reliable than sendBeacon for our use case
+		try {
+			// Use fetch with keepalive flag for page unload scenarios
+			fetch(`${process.env.REACT_APP_API_BASE_URL}/v1/resume/update-view-time`, {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(payload),
+				keepalive: true, // This ensures the request continues even if the page unloads
 			})
-			.catch((error) => {
-				console.error("Error sending view time data via axios:", error);
-
-				// Additional debugging information
-				if (error.response) {
-					console.error("Response status:", error.response.status);
-					console.error("Response data:", error.response.data);
-				} else if (error.request) {
-					console.error("No response received:", error.request);
+			.then(response => {
+				if (response.ok) {
+					console.log("View time data sent successfully via fetch with keepalive");
 				} else {
-					console.error("Request setup error:", error.message);
+					console.error("Fetch request failed with status:", response.status);
+				}
+			})
+			.catch(error => {
+				console.error("Error with fetch keepalive:", error);
+				
+				// Fallback to sendBeacon if fetch fails
+				if (navigator.sendBeacon) {
+					try {
+						const data = JSON.stringify(payload);
+						const url = `${process.env.REACT_APP_API_BASE_URL}/v1/resume/update-view-time`;
+						const success = navigator.sendBeacon(
+							url,
+							new Blob([data], { type: "application/json" })
+						);
+						if (success) {
+							console.log("View time data sent successfully via sendBeacon (fallback)");
+						} else {
+							console.error("sendBeacon also failed");
+						}
+					} catch (beaconError) {
+						console.error("sendBeacon fallback failed:", beaconError);
+					}
 				}
 			});
+		} catch (error) {
+			console.error("Error setting up fetch request:", error);
+			
+			// Final fallback to axios for non-unload scenarios
+			axios
+				.post("/v1/resume/update-view-time", payload, {
+					timeout: 2000,
+				})
+				.then((response) => {
+					console.log("View time data sent successfully via axios:", response.data);
+				})
+				.catch((axiosError) => {
+					console.error("All methods failed to send view time data:", axiosError);
+				});
+		}
 	}, [resumeViewsId, sessionStartTime]);
 
 	// Use location to detect route changes
@@ -956,28 +968,45 @@ const ResumeView = () => {
 		};
 	}, [location, trackSectionExits, sendViewTimeData]);
 
-	// Set up beforeunload event listener to track page exit
+	// Set up comprehensive event listeners for page unload tracking
 	useEffect(() => {
 		if (!resumeViewsId) return;
 
-		const handleBeforeUnload = (event) => {
+		const handlePageUnload = () => {
+			console.log("unload detected, sending view time data");
 			// Track section exits first
 			trackSectionExits();
 			// Then send overall view time data
 			sendViewTimeData();
 		};
-		window.addEventListener("beforeunload", handleBeforeUnload, {capture: true});
+
+		const handleBeforeUnload = (event) => {
+			console.log("page: Before unload detected");
+			handlePageUnload();
+			// Don't prevent default to allow normal navigation
+		};
+
+		// const handleVisibilityChange = () => {
+		// 	if (document.visibilityState === "hidden") {
+		// 		console.log("Page: visibility changed to hidden");
+		// 		handlePageUnload();
+		// 	}
+		// };
+
+		// const handlePageHide = () => {
+		// 	console.log("Page: hide detected");
+		// 	handlePageUnload();
+		// };
+
+		// Add multiple event listeners for comprehensive coverage
+		window.addEventListener("beforeunload", handleBeforeUnload);
+		// window.addEventListener("pagehide", handlePageHide);
+		// document.addEventListener("visibilitychange", handleVisibilityChange);
+
 		return () => {
-			window.removeEventListener("beforeunload", handleBeforeUnload, {capture: true});
-			// 	// Only track section exits and send view time data when the component is truly unmounting
-			// 	// or when the user is navigating away, but not during internal re-renders
-			// 	// We also check if beforeunload was triggered to avoid duplicate calls
-			// 	if ((isUnmountingRef.current || isNavigatingAwayRef.current) && !beforeunloadTriggered) {
-			// 		// Track section exits first
-			// 		trackSectionExits();
-			// 		// Then send overall view time data
-			// 		sendViewTimeData();
-			// 	}
+			window.removeEventListener("beforeunload", handleBeforeUnload);
+			// window.removeEventListener("pagehide", handlePageHide);
+			// document.removeEventListener("visibilitychange", handleVisibilityChange);
 		};
 	}, [resumeViewsId, sendViewTimeData, trackSectionExits]);
 
