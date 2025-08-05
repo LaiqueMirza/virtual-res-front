@@ -13,10 +13,9 @@ import {
   InputAdornment,
   IconButton,
   useMediaQuery,
-  useTheme
+  useTheme,
+  Stack
 } from '@mui/material';
-import Visibility from '@mui/icons-material/Visibility';
-import VisibilityOff from '@mui/icons-material/VisibilityOff';
 
 const Login = () => {
   const theme = useTheme();
@@ -79,92 +78,253 @@ const Login = () => {
   }
 
   return (
-    <Container component="main" maxWidth="xs" sx={{ px: { xs: 2, sm: 3 } }}>
-      <Box
-        sx={{
-          marginTop: { xs: 4, sm: 8 },
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-        }}
-      >
-        <Paper
-          elevation={3}
-          sx={{
-            padding: { xs: 2, sm: 4 },
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            width: '100%',
-          }}
-        >
-          <Typography component="h1" variant="h5" sx={{ mb: 3 }}>
-            Sign In
-          </Typography>
+    <Box sx={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
+      {/* Left side - Login Form */}
+      <Box sx={{ width: { xs: '100%', md: '50%' }, p: { xs: 2, sm: 4, md: 8 }, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <Box sx={{ maxWidth: 410, mx: 'auto', width: '100%' }}>
+          {/* Header */}
+          <Box sx={{ mb: 5 }}>
+            <Typography 
+              variant="h4" 
+              component="h1" 
+              sx={{ 
+                fontFamily: '"DM Sans", sans-serif',
+                fontWeight: 700,
+                fontSize: '36px',
+                color: '#2B3674',
+                mb: 1,
+                lineHeight: 1.55
+              }}
+            >
+              Sign In
+            </Typography>
+            <Typography 
+              variant="body1" 
+              sx={{ 
+                fontFamily: '"DM Sans", sans-serif',
+                fontWeight: 400,
+                fontSize: '16px',
+                color: '#A3AED0'
+              }}
+            >
+              Enter your email and password to sign in!
+            </Typography>
+          </Box>
 
           {error && (
-            <Alert severity="error" sx={{ width: '100%', mb: 2 }}>
+            <Alert severity="error" sx={{ width: '100%', mb: 3, borderRadius: 2 }}>
               {error}
             </Alert>
           )}
 
-          <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1, width: '100%' }}>
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              id="email"
-              label="Email Address"
-              name="email"
-              autoComplete="email"
-              autoFocus
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              error={!!formErrors.email}
-              helperText={formErrors.email}
-              disabled={isLoading}
-            />
-            <TextField
-              margin="normal"
-              required
-              fullWidth
-              name="password"
-              label="Password"
-              type={showPassword ? 'text' : 'password'}
-              id="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              error={!!formErrors.password}
-              helperText={formErrors.password}
-              disabled={isLoading}
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    <IconButton
-                      aria-label="toggle password visibility"
-                      onClick={handleTogglePasswordVisibility}
-                      edge="end"
-                    >
-                      {showPassword ? <VisibilityOff /> : <Visibility />}
-                    </IconButton>
-                  </InputAdornment>
-                ),
-              }}
-            />
+          <Box component="form" onSubmit={handleSubmit} sx={{ width: '100%' }}>
+            {/* Email Field */}
+            <Box sx={{ mb: 3 }}>
+              <Typography 
+                variant="subtitle2" 
+                sx={{ 
+                  fontFamily: '"DM Sans", sans-serif',
+                  fontWeight: 500,
+                  fontSize: '14px',
+                  color: '#2B3674',
+                  mb: 1
+                }}
+              >
+                Email*
+              </Typography>
+              <TextField
+                fullWidth
+                id="email"
+                name="email"
+                placeholder="mail@simmmple.com"
+                autoComplete="email"
+                autoFocus
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                error={!!formErrors.email}
+                helperText={formErrors.email}
+                disabled={isLoading}
+                variant="outlined"
+                InputProps={{
+                  sx: {
+                    borderRadius: '16px',
+                    height: '50px',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#E0E5F2'
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#4318FF'
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#4318FF'
+                    },
+                    '& input::placeholder': {
+                      color: '#A3AED0',
+                      fontFamily: '"DM Sans", sans-serif',
+                      fontSize: '14px',
+                      opacity: 1
+                    }
+                  }
+                }}
+              />
+            </Box>
+
+            {/* Password Field */}
+            <Box sx={{ mb: 4 }}>
+              <Typography 
+                variant="subtitle2" 
+                sx={{ 
+                  fontFamily: '"DM Sans", sans-serif',
+                  fontWeight: 500,
+                  fontSize: '14px',
+                  color: '#2B3674',
+                  mb: 1
+                }}
+              >
+                Password*
+              </Typography>
+              <TextField
+                fullWidth
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                id="password"
+                placeholder="Min. 8 characters"
+                autoComplete="current-password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                error={!!formErrors.password}
+                helperText={formErrors.password}
+                disabled={isLoading}
+                variant="outlined"
+                InputProps={{
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        aria-label="toggle password visibility"
+                        onClick={handleTogglePasswordVisibility}
+                        edge="end"
+                        sx={{ color: '#A3AED0' }}
+                      >
+                        <Box 
+                          component="img" 
+                          src="/images/login/eye_icon_inner.svg" 
+                          alt="toggle password visibility"
+                          sx={{ width: 18, height: 12 }}
+                        />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                  sx: {
+                    borderRadius: '16px',
+                    height: '50px',
+                    '& .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#E0E5F2'
+                    },
+                    '&:hover .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#4318FF'
+                    },
+                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                      borderColor: '#4318FF'
+                    },
+                    '& input::placeholder': {
+                      color: '#A3AED0',
+                      fontFamily: '"DM Sans", sans-serif',
+                      fontSize: '14px',
+                      opacity: 1
+                    }
+                  }
+                }}
+              />
+            </Box>
+
+            {/* Sign In Button */}
             <Button
               type="submit"
               fullWidth
               variant="contained"
-              sx={{ mt: 3, mb: 2 }}
               disabled={isLoading}
+              sx={{ 
+                height: '54px',
+                borderRadius: '16px',
+                backgroundColor: '#4318FF',
+                fontFamily: '"DM Sans", sans-serif',
+                fontWeight: 700,
+                fontSize: '14px',
+                textTransform: 'none',
+                boxShadow: 'none',
+                '&:hover': {
+                  backgroundColor: '#3311CC',
+                  boxShadow: 'none'
+                }
+              }}
             >
-              {isLoading ? <CircularProgress size={24} /> : 'Sign In'}
+              {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
             </Button>
           </Box>
-        </Paper>
+        </Box>
       </Box>
-    </Container>
+
+      {/* Right side - Decorative Image */}
+      <Box 
+        sx={{ 
+          display: { xs: 'none', md: 'block' },
+          width: '50%',
+          position: 'relative',
+          overflow: 'hidden',
+          background: 'linear-gradient(135deg, #868CFF 0%, #4318FF 100%)',
+          borderRadius: '0 0 0 200px'
+        }}
+      >
+        {/* Horizon Logo */}
+        <Box sx={{ position: 'absolute', top: '35%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
+          <Box component="img" src="/images/login/horizon_logo.svg" alt="Horizon Logo" sx={{ width: 280, height: 280, filter: 'drop-shadow(0px 20px 40px rgba(0, 0, 0, 0.2))' }} />
+        </Box>
+
+        
+        {/* Horizon UI Link */}
+        <Box sx={{ position: 'absolute', bottom: '25%', left: '50%', transform: 'translateX(-50%)', textAlign: 'center' }}>
+          <Box 
+            sx={{ 
+              width: 471,
+              height: 134,
+              borderRadius: '26px',
+              backgroundColor: 'rgba(255, 255, 255, 0.1)',
+              border: '2px solid rgba(255, 255, 255, 0.2)',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center',
+              backdropFilter: 'blur(10px)',
+              padding: '20px'
+            }}
+          >
+            <Typography 
+              sx={{ 
+                fontFamily: '"Plus Jakarta Display", sans-serif',
+                fontWeight: 400,
+                fontSize: '17.6px',
+                color: '#FFFFFF',
+                mb: 1,
+                opacity: 0.8
+              }}
+            >
+              Welcome to the analysis application
+            </Typography>
+            <Typography 
+              sx={{ 
+                fontFamily: '"Plus Jakarta Display", sans-serif',
+                fontWeight: 700,
+                fontSize: '29.3px',
+                color: '#FFFFFF',
+                lineHeight: 1.55
+              }}
+            >
+              Resume Analysis
+            </Typography>
+          </Box>
+        </Box>
+      </Box>
+    </Box>
   );
 };
 

@@ -572,7 +572,7 @@ const ResumeView = () => {
 				}));
 
 				// Send to analytics backend
-				// Use resumeViewsId from Redux,
+				// Use resumeViewsId from sessionStorage
 
 				sendEngagementData("scroll_depth", {
 					threshold,
@@ -580,6 +580,7 @@ const ResumeView = () => {
 					resume_share_links_id: resume_share_links_id,
 					resume_views_id: resumeViewsId,
 					scroll_percentage: threshold,
+					actual_percentage: scrollPercentage, // Include actual percentage for debugging
 				});
 
 				// Call the backend API for scroll depth tracking - only once per threshold
