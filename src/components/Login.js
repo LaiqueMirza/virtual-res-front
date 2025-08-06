@@ -4,22 +4,15 @@ import { useAuth } from '../context/AuthContext';
 import {
   Box,
   Button,
-  Container,
   TextField,
   Typography,
-  Paper,
   Alert,
   CircularProgress,
   InputAdornment,
-  IconButton,
-  useMediaQuery,
-  useTheme,
-  Stack
+  IconButton
 } from '@mui/material';
 
 const Login = () => {
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -267,60 +260,65 @@ const Login = () => {
       {/* Right side - Decorative Image */}
       <Box 
         sx={{ 
-          display: { xs: 'none', md: 'block' },
+          display: { xs: 'none', md: 'flex' },
           width: '50%',
-          position: 'relative',
           overflow: 'hidden',
           background: 'linear-gradient(135deg, #868CFF 0%, #4318FF 100%)',
-          borderRadius: '0 0 0 200px'
+          borderRadius: '0 0 0 200px',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          py: 8
         }}
       >
-        {/* Horizon Logo */}
-        <Box sx={{ position: 'absolute', top: '35%', left: '50%', transform: 'translate(-50%, -50%)', textAlign: 'center' }}>
-          <Box component="img" src="/images/login/horizon_logo.svg" alt="Horizon Logo" sx={{ width: 280, height: 280, filter: 'drop-shadow(0px 20px 40px rgba(0, 0, 0, 0.2))' }} />
-        </Box>
-
-        
-        {/* Horizon UI Link */}
-        <Box sx={{ position: 'absolute', bottom: '25%', left: '50%', transform: 'translateX(-50%)', textAlign: 'center' }}>
-          <Box 
-            sx={{ 
-              width: 471,
-              height: 134,
-              borderRadius: '26px',
-              backgroundColor: 'rgba(255, 255, 255, 0.1)',
-              border: '2px solid rgba(255, 255, 255, 0.2)',
-              display: 'flex',
-              flexDirection: 'column',
-              justifyContent: 'center',
-              alignItems: 'center',
-              backdropFilter: 'blur(10px)',
-              padding: '20px'
-            }}
-          >
-            <Typography 
+        {/* Flex container for content */}
+        <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
+          {/* Horizon Logo */}
+          <Box sx={{ textAlign: 'center'}}>
+            <Box component="img" src="/images/login/resume-logo.png" alt="Horizon Logo" sx={{ width: 380, height: 380, filter: 'drop-shadow(0px 20px 40px rgba(0, 0, 0, 0.2))' }} />
+          </Box>
+          
+          {/* Horizon UI Link */}
+          <Box sx={{ textAlign: 'center' }}>
+            <Box 
               sx={{ 
-                fontFamily: '"Plus Jakarta Display", sans-serif',
-                fontWeight: 400,
-                fontSize: '17.6px',
-                color: '#FFFFFF',
-                mb: 1,
-                opacity: 0.8
+                width: 471,
+                height: 134,
+                borderRadius: '26px',
+                backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                border: '2px solid rgba(255, 255, 255, 0.2)',
+                display: 'flex',
+                flexDirection: 'column',
+                justifyContent: 'center',
+                alignItems: 'center',
+                backdropFilter: 'blur(10px)',
+                padding: '20px'
               }}
             >
-              Welcome to the analysis application
-            </Typography>
-            <Typography 
-              sx={{ 
-                fontFamily: '"Plus Jakarta Display", sans-serif',
-                fontWeight: 700,
-                fontSize: '29.3px',
-                color: '#FFFFFF',
-                lineHeight: 1.55
-              }}
-            >
-              Resume Analysis
-            </Typography>
+              <Typography 
+                sx={{ 
+                  fontFamily: '"Plus Jakarta Display", sans-serif',
+                  fontWeight: 400,
+                  fontSize: '17.6px',
+                  color: '#FFFFFF',
+                  mb: 1,
+                  opacity: 0.8
+                }}
+              >
+                Welcome to the analysis application
+              </Typography>
+              <Typography 
+                sx={{ 
+                  fontFamily: '"Plus Jakarta Display", sans-serif',
+                  fontWeight: 700,
+                  fontSize: '29.3px',
+                  color: '#FFFFFF',
+                  lineHeight: 1.55
+                }}
+              >
+                Resume Analysis
+              </Typography>
+            </Box>
           </Box>
         </Box>
       </Box>
