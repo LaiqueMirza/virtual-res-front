@@ -9,10 +9,15 @@ import {
   Alert,
   CircularProgress,
   InputAdornment,
-  IconButton
+  IconButton,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 
 const Login = () => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.down('md'));
   
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -76,14 +81,14 @@ const Login = () => {
       <Box sx={{ width: { xs: '100%', md: '50%' }, p: { xs: 2, sm: 4, md: 8 }, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <Box sx={{ maxWidth: 410, mx: 'auto', width: '100%' }}>
           {/* Header */}
-          <Box sx={{ mb: 5 }}>
+          <Box sx={{ mb: { xs: 3, sm: 5 } }}>
             <Typography 
-              variant="h4" 
+              variant={isMobile ? "h5" : "h4"} 
               component="h1" 
               sx={{ 
                 fontFamily: '"DM Sans", sans-serif',
                 fontWeight: 700,
-                fontSize: '36px',
+                fontSize: { xs: '28px', sm: '36px' },
                 color: '#2B3674',
                 mb: 1,
                 lineHeight: 1.55
@@ -96,7 +101,7 @@ const Login = () => {
               sx={{ 
                 fontFamily: '"DM Sans", sans-serif',
                 fontWeight: 400,
-                fontSize: '16px',
+                fontSize: { xs: '14px', sm: '16px' },
                 color: '#A3AED0'
               }}
             >
@@ -140,8 +145,8 @@ const Login = () => {
                 variant="outlined"
                 InputProps={{
                   sx: {
-                    borderRadius: '16px',
-                    height: '50px',
+                    borderRadius: { xs: '12px', sm: '16px' },
+                    height: { xs: '45px', sm: '50px' },
                     '& .MuiOutlinedInput-notchedOutline': {
                       borderColor: '#E0E5F2'
                     },
@@ -154,7 +159,7 @@ const Login = () => {
                     '& input::placeholder': {
                       color: '#A3AED0',
                       fontFamily: '"DM Sans", sans-serif',
-                      fontSize: '14px',
+                      fontSize: { xs: '13px', sm: '14px' },
                       opacity: 1
                     }
                   }
@@ -202,14 +207,14 @@ const Login = () => {
                           component="img" 
                           src="/images/login/eye_icon_inner.svg" 
                           alt="toggle password visibility"
-                          sx={{ width: 18, height: 12 }}
+                          sx={{ width: { xs: 16, sm: 18 }, height: { xs: 10, sm: 12 } }}
                         />
                       </IconButton>
                     </InputAdornment>
                   ),
                   sx: {
-                    borderRadius: '16px',
-                    height: '50px',
+                    borderRadius: { xs: '12px', sm: '16px' },
+                    height: { xs: '45px', sm: '50px' },
                     '& .MuiOutlinedInput-notchedOutline': {
                       borderColor: '#E0E5F2'
                     },
@@ -222,7 +227,7 @@ const Login = () => {
                     '& input::placeholder': {
                       color: '#A3AED0',
                       fontFamily: '"DM Sans", sans-serif',
-                      fontSize: '14px',
+                      fontSize: { xs: '13px', sm: '14px' },
                       opacity: 1
                     }
                   }
@@ -237,12 +242,12 @@ const Login = () => {
               variant="contained"
               disabled={isLoading}
               sx={{ 
-                height: '54px',
-                borderRadius: '16px',
+                height: { xs: '48px', sm: '54px' },
+                borderRadius: { xs: '12px', sm: '16px' },
                 backgroundColor: '#4318FF',
                 fontFamily: '"DM Sans", sans-serif',
                 fontWeight: 700,
-                fontSize: '14px',
+                fontSize: { xs: '13px', sm: '14px' },
                 textTransform: 'none',
                 boxShadow: 'none',
                 '&:hover': {
@@ -251,7 +256,7 @@ const Login = () => {
                 }
               }}
             >
-              {isLoading ? <CircularProgress size={24} color="inherit" /> : 'Sign In'}
+              {isLoading ? <CircularProgress size={isMobile ? 20 : 24} color="inherit" /> : 'Sign In'}
             </Button>
           </Box>
         </Box>
@@ -263,62 +268,59 @@ const Login = () => {
           display: { xs: 'none', md: 'flex' },
           width: '50%',
           overflow: 'hidden',
-          background: 'linear-gradient(135deg, #868CFF 0%, #4318FF 100%)',
-          borderRadius: '0 0 0 200px',
+          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          borderRadius: { xs: '0', md: '0 20px 20px 0' },
           flexDirection: 'column',
-          justifyContent: 'space-between',
+          justifyContent: 'center',
           alignItems: 'center',
-          py: 8
+          py: { xs: 2, md: 4 }
         }}
       >
         {/* Flex container for content */}
-        <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 1 }}>
-          {/* Horizon Logo */}
-          <Box sx={{ textAlign: 'center'}}>
-            <Box component="img" src="/images/login/resume-logo.png" alt="Horizon Logo" sx={{ width: 380, height: 380, filter: 'drop-shadow(0px 20px 40px rgba(0, 0, 0, 0.2))' }} />
-          </Box>
+        <Box sx={{ maxWidth: { xs: '250px', md: '300px' }, textAlign: 'center' }}>
+          {/* Login Illustration */}
+          <Box
+            component="img"
+            src="/images/login/resume-logo.png"
+            alt="Login Illustration"
+            sx={{
+              width: '100%',
+              maxWidth: { xs: '200px', md: '250px' },
+              height: 'auto',
+              mb: { xs: 2, md: 3 }
+            }}
+          />
           
-          {/* Horizon UI Link */}
-          <Box sx={{ textAlign: 'center' }}>
-            <Box 
+          {/* Welcome Text */}
+          <Box sx={{ 
+            minHeight: { xs: '80px', md: '120px' }, 
+            padding: { xs: '15px', md: '20px' } 
+          }}>
+            <Typography 
               sx={{ 
-                width: 471,
-                height: 134,
-                borderRadius: '26px',
-                backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                border: '2px solid rgba(255, 255, 255, 0.2)',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'center',
-                alignItems: 'center',
-                backdropFilter: 'blur(10px)',
-                padding: '20px'
+                fontFamily: '"Plus Jakarta Display", sans-serif',
+                fontWeight: 400,
+                fontSize: { xs: '14px', sm: '16px', md: '17.6px' },
+                color: '#FFFFFF',
+                mb: 1,
+                opacity: 0.8,
+                textAlign: 'center'
               }}
             >
-              <Typography 
-                sx={{ 
-                  fontFamily: '"Plus Jakarta Display", sans-serif',
-                  fontWeight: 400,
-                  fontSize: '17.6px',
-                  color: '#FFFFFF',
-                  mb: 1,
-                  opacity: 0.8
-                }}
-              >
-                Welcome to the analysis application
-              </Typography>
-              <Typography 
-                sx={{ 
-                  fontFamily: '"Plus Jakarta Display", sans-serif',
-                  fontWeight: 700,
-                  fontSize: '29.3px',
-                  color: '#FFFFFF',
-                  lineHeight: 1.55
-                }}
-              >
-                Resume Analysis
-              </Typography>
-            </Box>
+              Welcome to the analysis application
+            </Typography>
+            <Typography 
+              sx={{ 
+                fontFamily: '"Plus Jakarta Display", sans-serif',
+                fontWeight: 700,
+                fontSize: { xs: '20px', sm: '24px', md: '29.3px' },
+                color: '#FFFFFF',
+                lineHeight: 1.55,
+                textAlign: 'center'
+              }}
+            >
+              Resume Analysis
+            </Typography>
           </Box>
         </Box>
       </Box>

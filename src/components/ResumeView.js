@@ -1,12 +1,16 @@
 import React, { useEffect, useState, useRef } from "react";
 import { useParams, useLocation } from "react-router-dom"; // Added useLocation to detect route changes
-import { Box, Typography, CircularProgress, Paper } from "@mui/material";
+import { Box, Typography, CircularProgress, Paper, useTheme, useMediaQuery } from "@mui/material";
 import axios from "../utils/axiosConfig";
 
 // Resume view component that renders a resume using Material-UI components
 
 const ResumeView = () => {
 	const { id: encodedId } = useParams(); // Get the base64 encoded ID from URL params
+	const theme = useTheme();
+	const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+	const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+	
 	// Decode the base64 encoded ID
 	const resume_share_links_id = React.useMemo(() => {
 		try {
@@ -1244,33 +1248,67 @@ const ResumeView = () => {
 	}
 
 	return (
-		<Box ref={resumeContainerRef} sx={{ maxHeight: "100vh", p: 3 }}>
+		<Box 
+			ref={resumeContainerRef} 
+			sx={{ 
+				maxHeight: "100vh", 
+				p: { xs: 1, sm: 2, md: 3 },
+				width: '100%'
+			}}
+		>
 			{parsedResume && (
 				<Paper
 					elevation={1}
 					sx={{
-						maxWidth: "780px",
+						maxWidth: { xs: "100%", sm: "90%", md: "780px" },
 						margin: "0 auto",
-						padding: "2rem",
+						padding: { xs: "1rem", sm: "1.5rem", md: "2rem" },
 						backgroundColor: "#fff",
-						// height: "100vh",
 						overflowY: "auto",
+						borderRadius: { xs: 0, sm: 1, md: 2 },
+						width: '100%'
 					}}>
 					{/* Header */}
 					<Box id="header" ref={(el) => (sectionRefs.current["header"] = el)}>
-						<Typography variant="h4" sx={{ fontWeight: 700, mb: 0.5 }}>
+						<Typography 
+							variant={isMobile ? "h5" : "h4"} 
+							sx={{ 
+								fontWeight: 700, 
+								mb: { xs: 0.3, sm: 0.5 },
+								fontSize: { xs: '1.5rem', sm: '2rem', md: '2.125rem' },
+								wordBreak: 'break-word'
+							}}
+						>
 							{parsedResume.basics.name}
 						</Typography>
 
-						<Typography variant="body1" sx={{ fontStyle: "italic", mb: 0.5 }}>
+						<Typography 
+							variant="body1" 
+							sx={{ 
+								fontStyle: "italic", 
+								mb: { xs: 0.3, sm: 0.5 },
+								fontSize: { xs: '0.9rem', sm: '1rem' }
+							}}
+						>
 							{parsedResume.basics.headline}
 						</Typography>
 
-						<Typography variant="body1" sx={{ fontStyle: "italic", mb: 2 }}>
+						<Typography 
+							variant="body1" 
+							sx={{ 
+								fontStyle: "italic", 
+								mb: { xs: 1.5, sm: 2 },
+								fontSize: { xs: '0.85rem', sm: '1rem' },
+								lineHeight: 1.4
+							}}
+						>
 							{parsedResume.basics.address}
 							<br />
 							{parsedResume.basics.phone} •{" "}
-							<a href={`mailto:${parsedResume.basics.email}`}>
+							<a 
+								href={`mailto:${parsedResume.basics.email}`}
+								style={{ wordBreak: 'break-all' }}
+							>
 								{parsedResume.basics.email}
 							</a>
 						</Typography>
@@ -1281,17 +1319,25 @@ const ResumeView = () => {
 						id="career-summary"
 						ref={(el) => (sectionRefs.current["career-summary"] = el)}>
 						<Typography
-							variant="h5"
+							variant={isMobile ? "h6" : "h5"}
 							sx={{
 								fontWeight: 700,
-								mt: 3,
-								mb: 1,
+								mt: { xs: 2, sm: 3 },
+								mb: { xs: 0.75, sm: 1 },
 								borderBottom: "1px solid #ccc",
-								pb: 0.5,
+								pb: { xs: 0.3, sm: 0.5 },
+								fontSize: { xs: '1.1rem', sm: '1.5rem' }
 							}}>
 							Career Summary
 						</Typography>
-						<Typography variant="body1" paragraph>
+						<Typography 
+							variant="body1" 
+							paragraph
+							sx={{
+								fontSize: { xs: '0.9rem', sm: '1rem' },
+								lineHeight: { xs: 1.4, sm: 1.5 }
+							}}
+						>
 							{parsedResume.careerSummary}
 						</Typography>
 					</Box>
@@ -1299,25 +1345,32 @@ const ResumeView = () => {
 					{/* Skills */}
 					<Box id="skills" ref={(el) => (sectionRefs.current["skills"] = el)}>
 						<Typography
-							variant="h5"
+							variant={isMobile ? "h6" : "h5"}
 							sx={{
 								fontWeight: 700,
-								mt: 3,
-								mb: 1,
+								mt: { xs: 2, sm: 3 },
+								mb: { xs: 0.75, sm: 1 },
 								borderBottom: "1px solid #ccc",
-								pb: 0.5,
+								pb: { xs: 0.3, sm: 0.5 },
+								fontSize: { xs: '1.1rem', sm: '1.5rem' }
 							}}>
 							Key Skills
 						</Typography>
-						<Box sx={{ display: "flex", flexWrap: "wrap", gap: 0.5, mb: 2 }}>
+						<Box sx={{ 
+							display: "flex", 
+							flexWrap: "wrap", 
+							gap: { xs: 0.3, sm: 0.5 }, 
+							mb: { xs: 1.5, sm: 2 }
+						}}>
 							{parsedResume.skills.map((skill, index) => (
 								<Box
 									key={index}
 									sx={{
 										backgroundColor: "#e7f1ff",
-										padding: "0.15rem 0.5rem",
-										borderRadius: "0.3rem",
-										fontSize: "0.8rem",
+										padding: { xs: "0.1rem 0.4rem", sm: "0.15rem 0.5rem" },
+										borderRadius: { xs: "0.25rem", sm: "0.3rem" },
+										fontSize: { xs: "0.7rem", sm: "0.8rem" },
+										lineHeight: 1.2
 									}}>
 									{skill}
 								</Box>
@@ -1330,20 +1383,29 @@ const ResumeView = () => {
 						id="achievements"
 						ref={(el) => (sectionRefs.current["achievements"] = el)}>
 						<Typography
-							variant="h5"
+							variant={isMobile ? "h6" : "h5"}
 							sx={{
 								fontWeight: 700,
-								mt: 3,
-								mb: 1,
+								mt: { xs: 2, sm: 3 },
+								mb: { xs: 0.75, sm: 1 },
 								borderBottom: "1px solid #ccc",
-								pb: 0.5,
+								pb: { xs: 0.3, sm: 0.5 },
+								fontSize: { xs: '1.1rem', sm: '1.5rem' }
 							}}>
 							Achievements
 						</Typography>
-						<Box component="ul" sx={{ ml: 3, mb: 2 }}>
+						<Box component="ul" sx={{ ml: { xs: 2, sm: 3 }, mb: { xs: 1.5, sm: 2 } }}>
 							{parsedResume.achievements.map((achievement, index) => (
-								<Box component="li" key={index} sx={{ mb: 0.5 }}>
-									<Typography variant="body1">{achievement}</Typography>
+								<Box component="li" key={index} sx={{ mb: { xs: 0.3, sm: 0.5 } }}>
+									<Typography 
+										variant="body1"
+										sx={{
+											fontSize: { xs: '0.9rem', sm: '1rem' },
+											lineHeight: { xs: 1.4, sm: 1.5 }
+										}}
+									>
+										{achievement}
+									</Typography>
 								</Box>
 							))}
 						</Box>
@@ -1354,28 +1416,52 @@ const ResumeView = () => {
 						id="employment-history"
 						ref={(el) => (sectionRefs.current["employment-history"] = el)}>
 						<Typography
-							variant="h5"
+							variant={isMobile ? "h6" : "h5"}
 							sx={{
 								fontWeight: 700,
-								mt: 3,
-								mb: 1,
+								mt: { xs: 2, sm: 3 },
+								mb: { xs: 0.75, sm: 1 },
 								borderBottom: "1px solid #ccc",
-								pb: 0.5,
+								pb: { xs: 0.3, sm: 0.5 },
+								fontSize: { xs: '1.1rem', sm: '1.5rem' }
 							}}>
 							Employment History
 						</Typography>
 						{parsedResume.employmentHistory.map((job, jobIndex) => (
-							<Box key={jobIndex} sx={{ mb: 2 }}>
-								<Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+							<Box key={jobIndex} sx={{ mb: { xs: 1.5, sm: 2 } }}>
+								<Typography 
+									variant={isMobile ? "subtitle1" : "h6"} 
+									sx={{ 
+										fontWeight: 700, 
+										mb: { xs: 0.3, sm: 0.5 },
+										fontSize: { xs: '1rem', sm: '1.25rem' },
+										wordBreak: 'break-word'
+									}}
+								>
 									{job.title} – {job.company}
 								</Typography>
-								<Typography variant="body2" sx={{ fontStyle: "italic", mb: 1 }}>
+								<Typography 
+									variant="body2" 
+									sx={{ 
+										fontStyle: "italic", 
+										mb: { xs: 0.75, sm: 1 },
+										fontSize: { xs: '0.8rem', sm: '0.875rem' }
+									}}
+								>
 									{job.start} – {job.end} | {job.location}
 								</Typography>
-								<Box component="ul" sx={{ ml: 3 }}>
+								<Box component="ul" sx={{ ml: { xs: 2, sm: 3 } }}>
 									{job.bullets.map((bullet, bulletIndex) => (
-										<Box component="li" key={bulletIndex} sx={{ mb: 0.5 }}>
-											<Typography variant="body1">{bullet}</Typography>
+										<Box component="li" key={bulletIndex} sx={{ mb: { xs: 0.3, sm: 0.5 } }}>
+											<Typography 
+												variant="body1"
+												sx={{
+													fontSize: { xs: '0.9rem', sm: '1rem' },
+													lineHeight: { xs: 1.4, sm: 1.5 }
+												}}
+											>
+												{bullet}
+											</Typography>
 										</Box>
 									))}
 								</Box>
@@ -1388,25 +1474,49 @@ const ResumeView = () => {
 						id="projects"
 						ref={(el) => (sectionRefs.current["projects"] = el)}>
 						<Typography
-							variant="h5"
+							variant={isMobile ? "h6" : "h5"}
 							sx={{
 								fontWeight: 700,
-								mt: 3,
-								mb: 1,
+								mt: { xs: 2, sm: 3 },
+								mb: { xs: 0.75, sm: 1 },
 								borderBottom: "1px solid #ccc",
-								pb: 0.5,
+								pb: { xs: 0.3, sm: 0.5 },
+								fontSize: { xs: '1.1rem', sm: '1.5rem' }
 							}}>
 							Selected Projects
 						</Typography>
 						{parsedResume.projects.map((project, projectIndex) => (
-							<Box key={projectIndex} sx={{ mb: 2 }}>
-								<Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+							<Box key={projectIndex} sx={{ mb: { xs: 1.5, sm: 2 } }}>
+								<Typography 
+									variant={isMobile ? "subtitle1" : "h6"} 
+									sx={{ 
+										fontWeight: 700, 
+										mb: { xs: 0.3, sm: 0.5 },
+										fontSize: { xs: '1rem', sm: '1.25rem' },
+										wordBreak: 'break-word'
+									}}
+								>
 									{project.name}
 								</Typography>
-								<Typography variant="body2" sx={{ fontStyle: "italic", mb: 1 }}>
+								<Typography 
+									variant="body2" 
+									sx={{ 
+										fontStyle: "italic", 
+										mb: { xs: 0.75, sm: 1 },
+										fontSize: { xs: '0.8rem', sm: '0.875rem' },
+										wordBreak: 'break-word'
+									}}
+								>
 									{project.period} • {project.tech.join(", ")}
 								</Typography>
-								<Typography variant="body1" paragraph>
+								<Typography 
+									variant="body1" 
+									paragraph
+									sx={{
+										fontSize: { xs: '0.9rem', sm: '1rem' },
+										lineHeight: { xs: 1.4, sm: 1.5 }
+									}}
+								>
 									{project.description}
 								</Typography>
 							</Box>
@@ -1418,29 +1528,53 @@ const ResumeView = () => {
 						id="education"
 						ref={(el) => (sectionRefs.current["education"] = el)}>
 						<Typography
-							variant="h5"
+							variant={isMobile ? "h6" : "h5"}
 							sx={{
 								fontWeight: 700,
-								mt: 3,
-								mb: 1,
+								mt: { xs: 2, sm: 3 },
+								mb: { xs: 0.75, sm: 1 },
 								borderBottom: "1px solid #ccc",
-								pb: 0.5,
+								pb: { xs: 0.3, sm: 0.5 },
+								fontSize: { xs: '1.1rem', sm: '1.5rem' }
 							}}>
 							Education
 						</Typography>
 						{parsedResume.education.map((edu, eduIndex) => (
-							<Box key={eduIndex} sx={{ mb: 2 }}>
-								<Typography variant="h6" sx={{ fontWeight: 700, mb: 0.5 }}>
+							<Box key={eduIndex} sx={{ mb: { xs: 1.5, sm: 2 } }}>
+								<Typography 
+									variant={isMobile ? "subtitle1" : "h6"} 
+									sx={{ 
+										fontWeight: 700, 
+										mb: { xs: 0.3, sm: 0.5 },
+										fontSize: { xs: '1rem', sm: '1.25rem' },
+										wordBreak: 'break-word'
+									}}
+								>
 									{edu.degree}, {edu.year}
 								</Typography>
-								<Typography variant="body2" sx={{ fontStyle: "italic", mb: 1 }}>
+								<Typography 
+									variant="body2" 
+									sx={{ 
+										fontStyle: "italic", 
+										mb: { xs: 0.75, sm: 1 },
+										fontSize: { xs: '0.8rem', sm: '0.875rem' }
+									}}
+								>
 									{edu.institution}, {edu.location}
 								</Typography>
 								{edu.highlights && (
-									<Box component="ul" sx={{ ml: 3 }}>
+									<Box component="ul" sx={{ ml: { xs: 2, sm: 3 } }}>
 										{edu.highlights.map((highlight, highlightIndex) => (
-											<Box component="li" key={highlightIndex} sx={{ mb: 0.5 }}>
-												<Typography variant="body1">{highlight}</Typography>
+											<Box component="li" key={highlightIndex} sx={{ mb: { xs: 0.3, sm: 0.5 } }}>
+												<Typography 
+													variant="body1"
+													sx={{
+														fontSize: { xs: '0.9rem', sm: '1rem' },
+														lineHeight: { xs: 1.4, sm: 1.5 }
+													}}
+												>
+													{highlight}
+												</Typography>
 											</Box>
 										))}
 									</Box>

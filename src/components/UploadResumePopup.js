@@ -9,7 +9,9 @@ import {
   Box,
   IconButton,
   CircularProgress,
-  TextField
+  TextField,
+  useTheme,
+  useMediaQuery
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import CloudUploadIcon from '@mui/icons-material/CloudUpload';
@@ -17,6 +19,10 @@ import AddIcon from '@mui/icons-material/Add';
 import axios from '../utils/axiosConfig';
 
 const UploadResumePopup = ({ open, onClose }) => {
+  const theme = useTheme();
+  const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+  const isTablet = useMediaQuery(theme.breakpoints.between('sm', 'md'));
+  
   const [file, setFile] = useState(null);
   const [resumeName, setResumeName] = useState('');
   const [fileError, setFileError] = useState('');
@@ -135,19 +141,58 @@ const UploadResumePopup = ({ open, onClose }) => {
       onClose={handleClose}
       maxWidth="sm"
       fullWidth
+      fullScreen={isMobile}
       PaperProps={{
-        sx: { borderRadius: 2 }
+        sx: { 
+          borderRadius: isMobile ? 0 : { xs: '0.5rem', sm: '0.75rem', md: '1rem' },
+          width: { xs: '95%', sm: '90%', md: '85%' },
+          maxWidth: { xs: '100%', sm: '500px', md: '600px' },
+          margin: isMobile ? 0 : 'auto'
+        }
       }}
     >
-      <DialogTitle sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', pb: 1 }}>
-        <Typography variant="h6">Upload New Resume(Pop Up)</Typography>
-        <IconButton onClick={handleClose} disabled={uploading}>
-          <CloseIcon />
+      <DialogTitle sx={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center', 
+        pb: { xs: '0.5rem', sm: '0.75rem', md: '1rem' },
+        px: { xs: '1rem', sm: '1.5rem', md: '2rem' },
+        pt: { xs: '1rem', sm: '1.5rem', md: '2rem' }
+      }}>
+        <Typography 
+          variant={isMobile ? "h6" : "h5"}
+          sx={{ 
+            fontSize: { xs: '1.1rem', sm: '1.25rem', md: '1.4rem' },
+            fontWeight: 600
+          }}
+        >
+          Upload New Resume
+        </Typography>
+        <IconButton 
+          onClick={handleClose} 
+          disabled={uploading}
+          sx={{
+            width: { xs: '2.5rem', sm: '2.75rem', md: '3rem' },
+            height: { xs: '2.5rem', sm: '2.75rem', md: '3rem' }
+          }}
+        >
+          <CloseIcon fontSize={isMobile ? "medium" : "large"} />
         </IconButton>
       </DialogTitle>
 
-      <DialogContent>
-        <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+      <DialogContent sx={{ 
+        px: { xs: '1rem', sm: '1.5rem', md: '2rem' },
+        py: { xs: '0.5rem', sm: '1rem', md: '1.5rem' }
+      }}>
+        <Typography 
+          variant="body2" 
+          color="text.secondary" 
+          sx={{ 
+            mb: { xs: '1rem', sm: '1.25rem', md: '1.5rem' },
+            fontSize: { xs: '0.8rem', sm: '0.85rem', md: '0.9rem' },
+            lineHeight: 1.5
+          }}
+        >
           Lorem ipsum dolor sit amet consectetur adipisicing elit. Maxime mollitia,
           molestiae quas vel sint commodi repudiandae consequuntur voluptatum laborum
           numquam blanditiis harum quisquam eius sed odit fugiat iusto fuga praesentium
@@ -163,24 +208,36 @@ const UploadResumePopup = ({ open, onClose }) => {
           error={!!resumeNameError}
           helperText={resumeNameError}
           disabled={uploading}
-          sx={{ mb: 2 }}
+          size={isMobile ? "small" : "medium"}
+          sx={{ 
+            mb: { xs: '1rem', sm: '1.25rem', md: '1.5rem' },
+            '& .MuiInputBase-root': {
+              fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' }
+            },
+            '& .MuiInputLabel-root': {
+              fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' }
+            }
+          }}
         />
 
         <Box
           sx={{
             border: '1px solid #ccc',
-            borderRadius: 1,
-            p: 2,
+            borderRadius: { xs: '0.5rem', sm: '0.75rem', md: '1rem' },
+            p: { xs: '1rem', sm: '1.25rem', md: '1.5rem' },
             textAlign: 'center',
             bgcolor: '#f9f9f9',
-            mb: 2,
-            height: 150,
+            mb: { xs: '1rem', sm: '1.25rem', md: '1.5rem' },
+            height: { xs: '120px', sm: '140px', md: '160px', lg: '180px' },
+            minHeight: '100px',
+            maxHeight: '200px',
             display: 'flex',
             flexDirection: 'column',
             justifyContent: 'center',
             alignItems: 'center',
             cursor: 'pointer',
             position: 'relative',
+            width: '100%',
             '&:hover': {
               bgcolor: '#f0f0f0',
             },
@@ -198,30 +255,60 @@ const UploadResumePopup = ({ open, onClose }) => {
           />
           
           {uploading ? (
-            <CircularProgress size={40} />
+            <CircularProgress size={isMobile ? 30 : isTablet ? 35 : 40} />
           ) : file ? (
             <>
-              <CloudUploadIcon sx={{ fontSize: 40, color: 'success.main', mb: 1 }} />
-              <Typography variant="body1">{file.name}</Typography>
-              <Typography variant="body2" color="text.secondary">
+              <CloudUploadIcon sx={{ 
+                fontSize: { xs: '2rem', sm: '2.25rem', md: '2.5rem', lg: '2.75rem' }, 
+                color: 'success.main', 
+                mb: { xs: '0.5rem', sm: '0.75rem', md: '1rem' }
+              }} />
+              <Typography 
+                variant={isMobile ? "body2" : "body1"}
+                sx={{ 
+                  fontSize: { xs: '0.8rem', sm: '0.9rem', md: '1rem' },
+                  fontWeight: 500,
+                  mb: { xs: '0.25rem', sm: '0.5rem' }
+                }}
+              >
+                {file.name}
+              </Typography>
+              <Typography 
+                variant="body2" 
+                color="text.secondary"
+                sx={{ 
+                  fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.8rem' }
+                }}
+              >
                 {(file.size / 1024 / 1024).toFixed(2)} MB
               </Typography>
             </>
           ) : (
             <>
               <Box sx={{ 
-                width: 40, 
-                height: 40, 
+                width: { xs: '2rem', sm: '2.25rem', md: '2.5rem', lg: '2.75rem' }, 
+                height: { xs: '2rem', sm: '2.25rem', md: '2.5rem', lg: '2.75rem' }, 
                 borderRadius: '50%', 
                 border: '2px solid #ccc',
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
-                mb: 1
+                mb: { xs: '0.5rem', sm: '0.75rem', md: '1rem' }
               }}>
-                <AddIcon />
+                <AddIcon sx={{ 
+                  fontSize: { xs: '1.25rem', sm: '1.5rem', md: '1.75rem', lg: '2rem' }
+                }} />
               </Box>
-              <Typography variant="body1">Click to upload or Drag and Drop the file here</Typography>
+              <Typography 
+                variant={isMobile ? "body2" : "body1"}
+                sx={{ 
+                  fontSize: { xs: '0.8rem', sm: '0.9rem', md: '1rem' },
+                  textAlign: 'center',
+                  lineHeight: 1.4
+                }}
+              >
+                {isMobile ? 'Tap to upload or drag file here' : 'Click to upload or Drag and Drop the file here'}
+              </Typography>
             </>
           )}
         </Box>
@@ -238,14 +325,46 @@ const UploadResumePopup = ({ open, onClose }) => {
           </Typography>
         )}
       </DialogContent>
-
-      <DialogActions sx={{ px: 3, pb: 3 }}>
-        <Button
+      
+      <DialogActions sx={{ 
+        p: { xs: '1rem', sm: '1.5rem', md: '2rem' }, 
+        gap: { xs: '0.5rem', sm: '0.75rem', md: '1rem' },
+        flexDirection: isMobile ? 'column' : 'row',
+        '& .MuiButton-root': {
+          width: isMobile ? '100%' : 'auto',
+          minWidth: { xs: '100%', sm: '120px', md: '140px' }
+        }
+      }}>
+        <Button 
+          onClick={handleClose} 
+          disabled={uploading}
+          variant="outlined"
+          size={isMobile ? "large" : "medium"}
+          sx={{
+            fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' },
+            py: { xs: '0.75rem', sm: '0.5rem', md: '0.6rem' },
+            order: isMobile ? 2 : 1
+          }}
+        >
+          Cancel
+        </Button>
+        <Button 
+          onClick={handleUpload} 
+          disabled={!file || uploading || !!resumeNameError}
           variant="contained"
-          color="success"
-          onClick={handleUpload}
-          disabled={!file || !resumeName.trim() || uploading || uploadSuccess}
-          fullWidth
+          size={isMobile ? "large" : "medium"}
+          startIcon={uploading ? 
+            <CircularProgress 
+              size={isMobile ? 24 : 20} 
+              sx={{ color: 'inherit' }}
+            /> : 
+            <CloudUploadIcon fontSize={isMobile ? "medium" : "small"} />
+          }
+          sx={{
+            fontSize: { xs: '0.9rem', sm: '1rem', md: '1.1rem' },
+            py: { xs: '0.75rem', sm: '0.5rem', md: '0.6rem' },
+            order: isMobile ? 1 : 2
+          }}
         >
           {uploading ? 'Uploading...' : 'Upload'}
         </Button>
