@@ -40,6 +40,7 @@ const ResumeView = () => {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState(null);
 	const [parsedResume, setParsedResume] = useState(null);
+	const [unmountLoading, setUnmountLoading] = useState(false);
 
 	// Refs for tracking elements
 	const resumeContainerRef = useRef(null);
@@ -962,7 +963,7 @@ const ResumeView = () => {
 				}
 			})
 			.catch(error => {
-				console.error("Error with fetch keepalive:", error);
+				console.error("Error with fetch keepalive", error);
 				
 				// Fallback to sendBeacon if fetch fails
 				if (navigator.sendBeacon) {
@@ -1024,15 +1025,32 @@ const ResumeView = () => {
 
 		const handlePageUnload = () => {
 			console.log("unload detected, sending view time data");
+			// Set loading state to true to show loader
+			setUnmountLoading(true);
+			
 			// Track section exits first
 			trackSectionExits();
 			// Then send overall view time data
 			sendViewTimeData();
+			
+			// Delay unmounting by 2 seconds to allow API calls to complete
+			return new Promise(resolve => setTimeout(resolve, 3000));
 		};
 
 		const handleBeforeUnload = (event) => {
 			console.log("page: Before unload detected");
+			// Show the loading overlay
+			setUnmountLoading(true);
+			
+			// Call the page unload handler
 			handlePageUnload();
+			
+			// Delay the unload by 2 seconds to allow API calls to complete
+			const start = Date.now();
+			while (Date.now() - start < 3000) {
+				// This creates a blocking delay to ensure API calls complete
+			}
+			
 			// Don't prevent default to allow normal navigation
 		};
 
@@ -1102,6 +1120,9 @@ const ResumeView = () => {
 
 		// Clean up event listeners and observers on unmount
 		return () => {
+			// Show loading overlay
+			setUnmountLoading(true);
+			
 			window.removeEventListener("scroll", handleScroll);
 			window.removeEventListener("click", handleClick);
 
@@ -1136,6 +1157,12 @@ const ResumeView = () => {
 				resume_share_links_id: resume_share_links_id,
 				resume_views_id: resumeViewsId,
 			});
+			
+			// Create a delay to allow API calls to complete
+			const start = Date.now();
+			while (Date.now() - start < 3000) {
+				// This creates a blocking delay to ensure API calls complete
+			}
 		};
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [
@@ -1253,9 +1280,33 @@ const ResumeView = () => {
 			sx={{ 
 				maxHeight: "100vh", 
 				p: { xs: 1, sm: 2, md: 3 },
-				width: '100%'
+				width: '100%',
+				position: 'relative'
 			}}
 		>
+			{/* Unmount Loading Overlay */}
+			{unmountLoading && (
+				<Box
+					sx={{
+						position: 'fixed',
+						top: 0,
+						left: 0,
+						right: 0,
+						bottom: 0,
+						backgroundColor: 'rgba(255, 255, 255, 0.8)',
+						display: 'flex',
+						flexDirection: 'column',
+						justifyContent: 'center',
+						alignItems: 'center',
+						zIndex: 9999
+					}}
+				>
+					<CircularProgress size={60} />
+					<Typography variant="h6" sx={{ mt: 2 }}>
+						Loading...
+					</Typography>
+				</Box>
+			)}
 			{parsedResume && (
 				<Paper
 					elevation={1}
